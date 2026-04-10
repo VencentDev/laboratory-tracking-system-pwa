@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PencilIcon, Trash2Icon } from "lucide-react";
+import { toast } from "sonner";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { DestructiveConfirmDialog } from "@/core/components/destructive-confirm-dialog";
@@ -22,7 +23,6 @@ type BorrowerListProps = {
 const PAGE_SIZE = 10;
 
 export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: BorrowerListProps) {
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [borrowerPendingDelete, setBorrowerPendingDelete] = useState<BorrowerProfile | null>(null);
   const [deletingBorrowerId, setDeletingBorrowerId] = useState<string | null>(null);
@@ -60,30 +60,20 @@ export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: B
       return;
     }
 
-    setMessage(null);
     setDeletingBorrowerId(borrowerPendingDelete.id);
 
     try {
       const deletedBorrower = await deleteBorrower(borrowerPendingDelete.id);
 
       if (!deletedBorrower) {
-        setMessage({
-          type: "error",
-          text: "The borrower could not be deleted. Try again once local storage is available.",
-        });
+        toast.error("The borrower could not be deleted. Try again once local storage is available.");
         return;
       }
 
-      setMessage({
-        type: "success",
-        text: `${deletedBorrower.name} was removed from the borrower registry.`,
-      });
+      toast.success(`${deletedBorrower.name} was removed from the borrower registry.`);
       setBorrowerPendingDelete(null);
     } catch {
-      setMessage({
-        type: "error",
-        text: "The borrower could not be deleted. Try again once local storage is available.",
-      });
+      toast.error("The borrower could not be deleted. Try again once local storage is available.");
     } finally {
       setDeletingBorrowerId(null);
     }
@@ -130,18 +120,6 @@ export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: B
 
   return (
     <div className="space-y-4">
-      {message ? (
-        <div
-          className={`rounded-2xl border px-4 py-3 text-sm ${
-            message.type === "success"
-              ? "border-emerald-500/15 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-              : "border-destructive/15 bg-destructive/10 text-destructive"
-          }`}
-        >
-          {message.text}
-        </div>
-      ) : null}
-
       <DataTableSurface>
         <DataTable>
           <thead>

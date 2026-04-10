@@ -94,3 +94,31 @@ export async function deleteTool(id: number) {
   }
 }
 
+export async function deleteTools(ids: number[]) {
+  try {
+    const uniqueIds = Array.from(new Set(ids));
+
+    if (uniqueIds.length === 0) {
+      return [];
+    }
+
+    return await appDb.transaction("rw", appDb.tools, appDb.transactions, async () => {
+      const existingTools = (await appDb.tools.bulkGet(uniqueIds)).filter(
+        (tool): tool is ToolProfile => tool !== undefined,
+      );
+
+      if (existingTools.length === 0) {
+        return [];
+      }
+
+      const existingToolIds = existingTools.map((tool) => tool.id);
+
+      await appDb.transactions.where("toolId").anyOf(existingToolIds).delete();
+      await appDb.tools.bulkDelete(existingToolIds);
+
+      return existingTools;
+    });
+  } catch {
+    return null;
+  }
+}

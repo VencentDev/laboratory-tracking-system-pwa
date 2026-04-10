@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { PencilIcon, SearchIcon, Trash2Icon, X } from "lucide-react";
+import { toast } from "sonner";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { DestructiveConfirmDialog } from "@/core/components/destructive-confirm-dialog";
@@ -17,7 +18,7 @@ import { BarcodePrintView } from "@/features/inventory/components/barcode-print-
 import { ToolTableFilters } from "@/features/inventory/components/tool-table-filters";
 import { formatToolStatus, getToolStatusClasses } from "@/features/inventory/components/tool-card";
 import { useTools } from "@/features/inventory/hooks/use-tools";
-import { deleteTool } from "@/features/inventory/lib/tool-repository";
+import { deleteTool, deleteTools } from "@/features/inventory/lib/tool-repository";
 import type { ToolProfile, ToolStatus } from "@/features/inventory/types";
 
 type ToolListProps = {
@@ -27,10 +28,11 @@ type ToolListProps = {
 const PAGE_SIZE = 10;
 
 export function ToolList({ onEdit }: ToolListProps) {
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [toolPendingDelete, setToolPendingDelete] = useState<ToolProfile | null>(null);
+  const [selectedToolsPendingDelete, setSelectedToolsPendingDelete] = useState<ToolProfile[]>([]);
   const [deletingToolId, setDeletingToolId] = useState<number | null>(null);
+  const [isDeletingSelectedTools, setIsDeletingSelectedTools] = useState(false);
   const [previewTool, setPreviewTool] = useState<ToolProfile | null>(null);
   const [shouldPrintPreview, setShouldPrintPreview] = useState(false);
   const [batchPrintTools, setBatchPrintTools] = useState<ToolProfile[]>([]);
@@ -69,7 +71,7 @@ export function ToolList({ onEdit }: ToolListProps) {
                   : tool.category?.trim().toLowerCase() === value.toLowerCase(),
               );
         const matchesStatus = statusFilter === "all" ? true : tool.currentStatus === statusFilter;
-        
+
         let matchesSearch = true;
         if (searchQuery.trim() !== "") {
           const searchLower = searchQuery.toLowerCase();
@@ -168,35 +170,60 @@ export function ToolList({ onEdit }: ToolListProps) {
       return;
     }
 
-    setMessage(null);
     setDeletingToolId(toolPendingDelete.id);
 
     try {
       const deletedTool = await deleteTool(toolPendingDelete.id);
 
       if (!deletedTool) {
-        setMessage({
-          type: "error",
-          text: "The tool could not be deleted. Try again once local storage is available.",
-        });
+        toast.error("The tool could not be deleted. Try again once local storage is available.");
         return;
       }
 
       setSelectedToolIds((currentSelectedToolIds) =>
         currentSelectedToolIds.filter((currentToolId) => currentToolId !== toolPendingDelete.id),
       );
-      setMessage({
-        type: "success",
-        text: `${deletedTool.name} was deleted from the inventory list.`,
-      });
+      toast.success(`${deletedTool.name} was deleted from the inventory list.`);
       setToolPendingDelete(null);
     } catch {
-      setMessage({
-        type: "error",
-        text: "The tool could not be deleted. Try again once local storage is available.",
-      });
+      toast.error("The tool could not be deleted. Try again once local storage is available.");
     } finally {
       setDeletingToolId(null);
+    }
+  }
+
+  async function handleDeleteSelectedTools() {
+    if (!selectedToolsPendingDelete.length) {
+      return;
+    }
+
+    setIsDeletingSelectedTools(true);
+
+    const toolIdsToDelete = selectedToolsPendingDelete.map((tool) => tool.id);
+
+    try {
+      const deletedTools = await deleteTools(toolIdsToDelete);
+
+      if (!deletedTools?.length) {
+        toast.error("The selected tools could not be deleted. Try again once local storage is available.");
+        return;
+      }
+
+      const deletedToolIdSet = new Set(deletedTools.map((tool) => tool.id));
+
+      setSelectedToolIds((currentSelectedToolIds) =>
+        currentSelectedToolIds.filter((currentToolId) => !deletedToolIdSet.has(currentToolId)),
+      );
+      toast.success(
+        deletedTools.length === 1
+          ? `${deletedTools[0].name} was deleted from the inventory list.`
+          : `${deletedTools.length} tools were deleted from the inventory list.`,
+      );
+      setSelectedToolsPendingDelete([]);
+    } catch {
+      toast.error("The selected tools could not be deleted. Try again once local storage is available.");
+    } finally {
+      setIsDeletingSelectedTools(false);
     }
   }
 
@@ -238,18 +265,6 @@ export function ToolList({ onEdit }: ToolListProps) {
 
   return (
     <div className="space-y-4">
-      {message ? (
-        <div
-          className={`rounded-2xl border px-4 py-3 text-sm font-medium ${
-            message.type === "success"
-              ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-800 dark:text-emerald-200"
-              : "border-destructive/30 bg-destructive/15 text-destructive-foreground"
-          }`}
-        >
-          {message.text}
-        </div>
-      ) : null}
-
       {/* --- Filter Container --- */}
       <div className="rounded-2xl border border-border/60 bg-card/40 p-4 shadow-sm">
         <div className="flex flex-col gap-3 md:gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -272,7 +287,7 @@ export function ToolList({ onEdit }: ToolListProps) {
               </button>
             )}
           </div>
-          
+
           {/* Filters */}
           <div className="w-full md:flex-1 lg:flex-initial lg:min-w-0">
             <ToolTableFilters
@@ -283,18 +298,29 @@ export function ToolList({ onEdit }: ToolListProps) {
               onStatusChange={handleStatusChange}
             />
           </div>
-          
-          {/* Print button */}
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full md:w-auto lg:self-stretch bg-background shrink-0"
-            disabled={selectedFilteredTools.length === 0}
-            onClick={() => setBatchPrintTools(selectedFilteredTools)}
-          >
-            Print Selected Barcodes
-            {selectedFilteredTools.length ? ` (${selectedFilteredTools.length})` : ""}
-          </Button>
+
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row lg:self-stretch">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full md:w-auto lg:self-stretch bg-background shrink-0"
+              disabled={selectedFilteredTools.length === 0}
+              onClick={() => setBatchPrintTools(selectedFilteredTools)}
+            >
+              Print Selected Barcodes
+              {selectedFilteredTools.length ? ` (${selectedFilteredTools.length})` : ""}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="w-full md:w-auto lg:self-stretch shrink-0"
+              disabled={selectedFilteredTools.length === 0 || isDeletingSelectedTools}
+              onClick={() => setSelectedToolsPendingDelete(selectedFilteredTools)}
+            >
+              Delete Selected
+              {selectedFilteredTools.length ? ` (${selectedFilteredTools.length})` : ""}
+            </Button>
+          </div>
         </div>
       </div>
       {/* --- End Filter Container --- */}
@@ -450,6 +476,35 @@ export function ToolList({ onEdit }: ToolListProps) {
         isPending={deletingToolId === toolPendingDelete?.id}
         onConfirm={handleDelete}
       />
+
+      <DestructiveConfirmDialog
+        open={selectedToolsPendingDelete.length > 0}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedToolsPendingDelete([]);
+          }
+        }}
+        title="Delete selected tools?"
+        description={formatBulkDeleteDescription(selectedToolsPendingDelete)}
+        confirmLabel={selectedToolsPendingDelete.length === 1 ? "Delete tool" : "Delete tools"}
+        isPending={isDeletingSelectedTools}
+        onConfirm={handleDeleteSelectedTools}
+      />
     </div>
   );
+}
+
+function formatBulkDeleteDescription(tools: ToolProfile[]) {
+  if (tools.length === 0) {
+    return "This action cannot be undone.";
+  }
+
+  const toolSummaries = tools.slice(0, 3).map((tool) => `${tool.name} (${tool.barcode})`);
+  const remainingToolCount = tools.length - toolSummaries.length;
+  const toolList =
+    remainingToolCount > 0
+      ? `${toolSummaries.join(", ")}, and ${remainingToolCount} more tool${remainingToolCount === 1 ? "" : "s"}`
+      : toolSummaries.join(", ");
+
+  return `This action cannot be undone. ${toolList} will be permanently removed from the inventory catalog.`;
 }
