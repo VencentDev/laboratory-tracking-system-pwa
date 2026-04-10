@@ -185,6 +185,29 @@ function isTransactionType(value: string): value is TransactionType {
   return value === "borrowed" || value === "returned" || value === "correction";
 }
 
+function normalizeTransactionTypeValue(value: string) {
+  const normalizedValue = value.trim().toLowerCase();
+  const compactValue = normalizedValue.replace(/[^a-z]/g, "");
+
+  if (
+    normalizedValue === "borrow" ||
+    compactValue === "checkout" ||
+    compactValue === "checkedout"
+  ) {
+    return "borrowed";
+  }
+
+  if (
+    normalizedValue === "return" ||
+    compactValue === "checkin" ||
+    compactValue === "checkedin"
+  ) {
+    return "returned";
+  }
+
+  return normalizedValue;
+}
+
 export async function importToolsCsv(file: File): Promise<CsvImportSummary> {
   const rows = await readCsvFile(file);
   const summary: CsvImportSummary = { created: 0, updated: 0, skipped: 0 };
@@ -293,7 +316,9 @@ export async function importTransactionsCsv(file: File): Promise<CsvImportSummar
 
     for (const row of rows) {
       const barcode = getCsvValue(row, "Barcode").trim();
-      const transactionTypeValue = getCsvValue(row, "Transaction Type").trim().toLowerCase();
+      const transactionTypeValue = normalizeTransactionTypeValue(
+        getCsvValue(row, "Transaction Type", "Action", "Type"),
+      );
       const recordedAt = parseOptionalDate(getCsvValue(row, "Recorded At"));
 
       if (!barcode || !isTransactionType(transactionTypeValue)) {

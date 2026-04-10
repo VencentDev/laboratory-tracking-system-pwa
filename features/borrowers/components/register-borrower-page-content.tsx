@@ -34,6 +34,11 @@ export function RegisterBorrowerPageContent() {
     setSearchQuery(value);
   }
 
+  function closeBorrowerDialog() {
+    setIsFormOpen(false);
+    setSelectedBorrower(undefined);
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -101,11 +106,12 @@ export function RegisterBorrowerPageContent() {
       <Dialog
         open={isFormOpen}
         onOpenChange={(open) => {
-          setIsFormOpen(open);
-
-          if (!open) {
-            setSelectedBorrower(undefined);
+          if (open) {
+            setIsFormOpen(true);
+            return;
           }
+
+          closeBorrowerDialog();
         }}
       >
         <DialogContent className="max-w-2xl">
@@ -119,7 +125,15 @@ export function RegisterBorrowerPageContent() {
                 : "Capture the borrower details in a simple form that matches current laboratory routines."}
             </DialogDescription>
           </DialogHeader>
-          <BorrowerForm key={selectedBorrower?.id ?? "create"} borrower={selectedBorrower} />
+          <BorrowerForm
+            key={selectedBorrower?.id ?? "create"}
+            borrower={selectedBorrower}
+            onSuccess={(mode) => {
+              if (mode === "update") {
+                closeBorrowerDialog();
+              }
+            }}
+          />
         </DialogContent>
       </Dialog>
     </div>

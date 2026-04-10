@@ -16,9 +16,10 @@ import type { BorrowerProfile } from "@/features/borrowers/types";
 
 type BorrowerFormProps = {
   borrower?: BorrowerProfile;
+  onSuccess?: (mode: "create" | "update") => void;
 };
 
-export function BorrowerForm({ borrower }: BorrowerFormProps) {
+export function BorrowerForm({ borrower, onSuccess }: BorrowerFormProps) {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const form = useForm<BorrowerInput>({
@@ -57,6 +58,7 @@ export function BorrowerForm({ borrower }: BorrowerFormProps) {
         }
 
         toast.success(`${updatedBorrower.name} was updated successfully.`);
+        onSuccess?.("update");
         return;
       }
 
@@ -80,6 +82,7 @@ export function BorrowerForm({ borrower }: BorrowerFormProps) {
         contactNumber: "",
       });
       toast.success(`${createdBorrower.name} was recorded and is ready for accountability tracking.`);
+      onSuccess?.("create");
     } catch {
       setMessage({
         type: "error",

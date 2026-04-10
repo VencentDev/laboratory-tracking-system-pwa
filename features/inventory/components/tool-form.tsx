@@ -21,6 +21,7 @@ import type { ToolProfile } from "@/features/inventory/types";
 
 type ToolFormProps = {
   tool?: ToolProfile;
+  onSuccess?: (mode: "create" | "update") => void;
 };
 
 function getDefaultValues(tool?: ToolProfile): ToolInput {
@@ -32,7 +33,7 @@ function getDefaultValues(tool?: ToolProfile): ToolInput {
   };
 }
 
-export function ToolForm({ tool }: ToolFormProps) {
+export function ToolForm({ tool, onSuccess }: ToolFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const { data: tools } = useTools();
   const form = useForm<ToolInput>({
@@ -63,6 +64,7 @@ export function ToolForm({ tool }: ToolFormProps) {
         }
 
         toast.success(`${updatedTool.name} was updated successfully.`);
+        onSuccess?.("update");
         return;
       }
 
@@ -75,6 +77,7 @@ export function ToolForm({ tool }: ToolFormProps) {
 
       form.reset(getDefaultValues());
       toast.success(`${createdTool.name} was registered and is ready for barcode printing.`);
+      onSuccess?.("create");
     } catch {
       toast.error("The request could not be completed. Try again once local storage is available.");
     } finally {

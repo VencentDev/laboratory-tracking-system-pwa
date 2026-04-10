@@ -33,6 +33,11 @@ export function AddItemsPageContent() {
     setIsFormOpen(true);
   }
 
+  function closeToolDialog() {
+    setIsFormOpen(false);
+    setSelectedTool(undefined);
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -59,11 +64,12 @@ export function AddItemsPageContent() {
       <Dialog
         open={isFormOpen}
         onOpenChange={(open) => {
-          setIsFormOpen(open);
-
-          if (!open) {
-            setSelectedTool(undefined);
+          if (open) {
+            setIsFormOpen(true);
+            return;
           }
+
+          closeToolDialog();
         }}
       >
         <DialogContent className="max-w-2xl">
@@ -75,7 +81,15 @@ export function AddItemsPageContent() {
                 : "Register a new laboratory tool and prepare its barcode label for printing."}
             </DialogDescription>
           </DialogHeader>
-          <ToolForm key={selectedTool?.id ?? "create"} tool={selectedTool} />
+          <ToolForm
+            key={selectedTool?.id ?? "create"}
+            tool={selectedTool}
+            onSuccess={(mode) => {
+              if (mode === "update") {
+                closeToolDialog();
+              }
+            }}
+          />
         </DialogContent>
       </Dialog>
     </div>
