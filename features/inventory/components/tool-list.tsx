@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { PencilIcon, SearchIcon, Trash2Icon, X } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { DestructiveConfirmDialog } from "@/core/components/destructive-confirm-dialog";
 import { Button } from "@/core/ui/button";
 import { DataTable, DataTableCell, DataTableHeaderCell, DataTableSurface } from "@/core/ui/data-table";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/core/ui/dialog";
@@ -28,6 +29,7 @@ const PAGE_SIZE = 10;
 export function ToolList({ onEdit }: ToolListProps) {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [toolPendingDelete, setToolPendingDelete] = useState<ToolProfile | null>(null);
   const [deletingToolId, setDeletingToolId] = useState<number | null>(null);
   const [previewTool, setPreviewTool] = useState<ToolProfile | null>(null);
   const [shouldPrintPreview, setShouldPrintPreview] = useState(false);
@@ -161,18 +163,16 @@ export function ToolList({ onEdit }: ToolListProps) {
     });
   }
 
-  async function handleDelete(tool: ToolProfile) {
-    const confirmed = window.confirm(`Delete ${tool.name} (${tool.barcode}) from the inventory catalog?`);
-
-    if (!confirmed) {
+  async function handleDelete() {
+    if (!toolPendingDelete) {
       return;
     }
 
     setMessage(null);
-    setDeletingToolId(tool.id);
+    setDeletingToolId(toolPendingDelete.id);
 
     try {
-      const deletedTool = await deleteTool(tool.id);
+      const deletedTool = await deleteTool(toolPendingDelete.id);
 
       if (!deletedTool) {
         setMessage({
@@ -183,12 +183,13 @@ export function ToolList({ onEdit }: ToolListProps) {
       }
 
       setSelectedToolIds((currentSelectedToolIds) =>
-        currentSelectedToolIds.filter((currentToolId) => currentToolId !== tool.id),
+        currentSelectedToolIds.filter((currentToolId) => currentToolId !== toolPendingDelete.id),
       );
       setMessage({
         type: "success",
         text: `${deletedTool.name} was deleted from the inventory list.`,
       });
+      setToolPendingDelete(null);
     } catch {
       setMessage({
         type: "error",
@@ -381,15 +382,15 @@ export function ToolList({ onEdit }: ToolListProps) {
                         >
                           <PencilIcon className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          disabled={isDeleting}
-                          onClick={() => void handleDelete(tool)}
-                          aria-label={`Delete ${tool.name}`}
-                          title="Delete"
-                        >
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        disabled={isDeleting}
+                        onClick={() => setToolPendingDelete(tool)}
+                        aria-label={`Delete ${tool.name}`}
+                        title="Delete"
+                      >
                           <Trash2Icon className="h-4 w-4" />
                         </Button>
                       </div>
@@ -431,6 +432,24 @@ export function ToolList({ onEdit }: ToolListProps) {
       {batchPrintTools.length && typeof document !== "undefined"
         ? createPortal(<BarcodePrintView tools={batchPrintTools} />, document.body)
         : null}
+
+      <DestructiveConfirmDialog
+        open={Boolean(toolPendingDelete)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setToolPendingDelete(null);
+          }
+        }}
+        title="Are you absolutely sure you want to delete?"
+        description={
+          toolPendingDelete
+            ? `This action cannot be undone. ${toolPendingDelete.name} (${toolPendingDelete.barcode}) will be permanently removed from the inventory catalog.`
+            : "This action cannot be undone."
+        }
+        confirmLabel="Delete tool"
+        isPending={deletingToolId === toolPendingDelete?.id}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

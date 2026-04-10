@@ -6,7 +6,6 @@ import { toast } from "sonner";
 
 import type { CsvImportSummary } from "@/core/lib/csv";
 import { buttonVariants } from "@/core/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/core/ui/tooltip";
 import { cn } from "@/core/lib/utils";
 
 type CsvTransferActionsProps = {
@@ -84,43 +83,35 @@ export function CsvTransferActions({
         }}
       />
       <div className="inline-flex h-10 items-stretch overflow-hidden rounded-xl border border-border/80 bg-background/80 shadow-sm">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label={isExporting ? `${exportLabel}...` : exportLabel}
-              disabled={isExporting || isImporting}
-              className={cn(
-                buttonVariants({ variant: "ghost", size: "icon" }),
-                "h-full w-10 rounded-none border-0 bg-transparent text-foreground hover:bg-muted/80",
-              )}
-              onClick={() => void handleExport()}
-            >
-              <DownloadIcon className="h-4 w-4" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>{isExporting ? `${exportLabel}...` : exportLabel}</TooltipContent>
-        </Tooltip>
+        <button
+          type="button"
+          aria-label={isExporting ? `${exportLabel}...` : exportLabel}
+          title={isExporting ? `${exportLabel}...` : exportLabel}
+          disabled={isExporting || isImporting}
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "icon" }),
+            "h-full w-10 rounded-none border-0 bg-transparent text-foreground hover:bg-muted/80",
+          )}
+          onClick={() => void handleExport()}
+        >
+          <DownloadIcon className="h-4 w-4" />
+        </button>
 
         <div className="my-2 w-px bg-border/80" aria-hidden="true" />
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label={isImporting ? `${importLabel}...` : importLabel}
-              disabled={isExporting || isImporting}
-              className={cn(
-                buttonVariants({ variant: "ghost", size: "icon" }),
-                "h-full w-10 rounded-none border-0 bg-transparent text-foreground hover:bg-muted/80",
-              )}
-              onClick={() => importInputRef.current?.click()}
-            >
-              <UploadIcon className="h-4 w-4" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>{isImporting ? `${importLabel}...` : importLabel}</TooltipContent>
-        </Tooltip>
+        <button
+          type="button"
+          aria-label={isImporting ? `${importLabel}...` : importLabel}
+          title={isImporting ? `${importLabel}...` : importLabel}
+          disabled={isExporting || isImporting}
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "icon" }),
+            "h-full w-10 rounded-none border-0 bg-transparent text-foreground hover:bg-muted/80",
+          )}
+          onClick={() => importInputRef.current?.click()}
+        >
+          <UploadIcon className="h-4 w-4" />
+        </button>
       </div>
     </>
   );

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PencilIcon, Trash2Icon } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { DestructiveConfirmDialog } from "@/core/components/destructive-confirm-dialog";
 import { Button } from "@/core/ui/button";
 import { DataTable, DataTableCell, DataTableHeaderCell, DataTableSurface } from "@/core/ui/data-table";
 import { TablePagination } from "@/core/ui/table-pagination";
@@ -23,6 +24,7 @@ const PAGE_SIZE = 10;
 export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: BorrowerListProps) {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [borrowerPendingDelete, setBorrowerPendingDelete] = useState<BorrowerProfile | null>(null);
   const [deletingBorrowerId, setDeletingBorrowerId] = useState<string | null>(null);
   const { data: borrowers, isLoading } = useBorrowers();
 
@@ -53,18 +55,16 @@ export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: B
   const totalPages = Math.max(1, Math.ceil(filteredBorrowers.length / PAGE_SIZE));
   const visiblePage = Math.min(currentPage, totalPages);
 
-  async function handleDelete(borrower: BorrowerProfile) {
-    const confirmed = window.confirm(`Delete ${borrower.name} (${borrower.schoolId}) from the borrower registry?`);
-
-    if (!confirmed) {
+  async function handleDelete() {
+    if (!borrowerPendingDelete) {
       return;
     }
 
     setMessage(null);
-    setDeletingBorrowerId(borrower.id);
+    setDeletingBorrowerId(borrowerPendingDelete.id);
 
     try {
-      const deletedBorrower = await deleteBorrower(borrower.id);
+      const deletedBorrower = await deleteBorrower(borrowerPendingDelete.id);
 
       if (!deletedBorrower) {
         setMessage({
@@ -78,6 +78,7 @@ export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: B
         type: "success",
         text: `${deletedBorrower.name} was removed from the borrower registry.`,
       });
+      setBorrowerPendingDelete(null);
     } catch {
       setMessage({
         type: "error",
@@ -192,7 +193,7 @@ export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: B
                         size="icon"
                         className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                         disabled={isDeleting}
-                        onClick={() => void handleDelete(borrower)}
+                        onClick={() => setBorrowerPendingDelete(borrower)}
                         aria-label={`Delete ${borrower.name}`}
                         title="Delete"
                       >
@@ -211,6 +212,24 @@ export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: B
         currentPage={visiblePage}
         totalPages={totalPages}
         onPageChange={setCurrentPage}
+      />
+
+      <DestructiveConfirmDialog
+        open={Boolean(borrowerPendingDelete)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBorrowerPendingDelete(null);
+          }
+        }}
+        title="Are you absolutely sure you want to delete?"
+        description={
+          borrowerPendingDelete
+            ? `This action cannot be undone. ${borrowerPendingDelete.name} (${borrowerPendingDelete.schoolId}) will be permanently removed from the borrower registry.`
+            : "This action cannot be undone."
+        }
+        confirmLabel="Delete borrower"
+        isPending={deletingBorrowerId === borrowerPendingDelete?.id}
+        onConfirm={handleDelete}
       />
     </div>
   );
