@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import { PencilIcon, SearchIcon, Trash2Icon, X } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { trpc } from "@/core/lib/trpc-client";
 import { Button } from "@/core/ui/button";
 import { DataTable, DataTableCell, DataTableHeaderCell, DataTableSurface } from "@/core/ui/data-table";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/core/ui/dialog";
@@ -16,18 +15,20 @@ import { BarcodeDisplay } from "@/features/inventory/components/barcode-display"
 import { BarcodePrintView } from "@/features/inventory/components/barcode-print-view";
 import { ToolTableFilters } from "@/features/inventory/components/tool-table-filters";
 import { formatToolStatus, getToolStatusClasses } from "@/features/inventory/components/tool-card";
+import { useTools } from "@/features/inventory/hooks/use-tools";
+import { deleteTool } from "@/features/inventory/lib/tool-repository";
 import type { ToolProfile, ToolStatus } from "@/features/inventory/types";
 
 type ToolListProps = {
-  onViewBarcode?: (tool: ToolProfile) => void;
   onEdit?: (tool: ToolProfile) => void;
 };
 
 const PAGE_SIZE = 10;
 
-export function ToolList({ onViewBarcode, onEdit }: ToolListProps) {
+export function ToolList({ onEdit }: ToolListProps) {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [deletingToolId, setDeletingToolId] = useState<number | null>(null);
   const [previewTool, setPreviewTool] = useState<ToolProfile | null>(null);
   const [shouldPrintPreview, setShouldPrintPreview] = useState(false);
   const [batchPrintTools, setBatchPrintTools] = useState<ToolProfile[]>([]);
@@ -36,9 +37,7 @@ export function ToolList({ onViewBarcode, onEdit }: ToolListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedToolIds, setSelectedToolIds] = useState<number[]>([]);
   const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
-  const utils = trpc.useUtils();
-  const { data: tools, isLoading } = trpc.tools.list.useQuery();
-  const deleteToolMutation = trpc.tools.delete.useMutation();
+  const { data: tools, isLoading } = useTools();
 
   function handleCategoryChange(nextCategoryFilter: Option[]) {
     setCurrentPage(1);
@@ -170,19 +169,22 @@ export function ToolList({ onViewBarcode, onEdit }: ToolListProps) {
     }
 
     setMessage(null);
+    setDeletingToolId(tool.id);
 
     try {
-      const deletedTool = await deleteToolMutation.mutateAsync({ id: tool.id });
+      const deletedTool = await deleteTool(tool.id);
 
       if (!deletedTool) {
         setMessage({
           type: "error",
-          text: "The tool could not be deleted. Try again once the database is available.",
+          text: "The tool could not be deleted. Try again once local storage is available.",
         });
         return;
       }
 
-      await utils.tools.list.invalidate();
+      setSelectedToolIds((currentSelectedToolIds) =>
+        currentSelectedToolIds.filter((currentToolId) => currentToolId !== tool.id),
+      );
       setMessage({
         type: "success",
         text: `${deletedTool.name} was deleted from the inventory list.`,
@@ -190,8 +192,10 @@ export function ToolList({ onViewBarcode, onEdit }: ToolListProps) {
     } catch {
       setMessage({
         type: "error",
-        text: "The tool could not be deleted. Try again once the database is available.",
+        text: "The tool could not be deleted. Try again once local storage is available.",
       });
+    } finally {
+      setDeletingToolId(null);
     }
   }
 
@@ -327,7 +331,7 @@ export function ToolList({ onViewBarcode, onEdit }: ToolListProps) {
             </thead>
             <tbody>
               {paginatedTools.map((tool) => {
-                const isDeleting = deleteToolMutation.isPending && deleteToolMutation.variables?.id === tool.id;
+                const isDeleting = deletingToolId === tool.id;
 
                 return (
                   <tr key={tool.id}>

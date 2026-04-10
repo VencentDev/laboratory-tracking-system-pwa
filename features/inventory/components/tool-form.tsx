@@ -1,10 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
-import { trpc } from "@/core/lib/trpc-client";
 import { Button } from "@/core/ui/button";
 import { Card, CardContent } from "@/core/ui/card";
 import { Input } from "@/core/ui/input";
@@ -15,6 +15,7 @@ import { ToolStatusSelector } from "@/features/inventory/components/tool-status-
 import { useTools } from "@/features/inventory/hooks/use-tools";
 import { getNextToolBarcodePreview } from "@/features/inventory/lib/barcode";
 import { getCategoryOptions } from "@/features/inventory/lib/category-options";
+import { createTool, updateTool } from "@/features/inventory/lib/tool-repository";
 import { toolSchema, type ToolInput } from "@/features/inventory/lib/validations";
 import type { ToolProfile } from "@/features/inventory/types";
 
@@ -32,10 +33,8 @@ function getDefaultValues(tool?: ToolProfile): ToolInput {
 }
 
 export function ToolForm({ tool }: ToolFormProps) {
-  const utils = trpc.useUtils();
+  const [isSaving, setIsSaving] = useState(false);
   const { data: tools } = useTools();
-  const createToolMutation = trpc.tools.create.useMutation();
-  const updateToolMutation = trpc.tools.update.useMutation();
   const form = useForm<ToolInput>({
     resolver: zodResolver(toolSchema),
     defaultValues: getDefaultValues(tool),
@@ -52,39 +51,36 @@ export function ToolForm({ tool }: ToolFormProps) {
   });
 
   const onSubmit = form.handleSubmit(async (values) => {
+    setIsSaving(true);
+
     try {
       if (tool) {
-        const updatedTool = await updateToolMutation.mutateAsync({
-          id: tool.id,
-          ...values,
-        });
+        const updatedTool = await updateTool(tool.id, values);
 
         if (!updatedTool) {
           toast.error("Tool details could not be updated. Try again in a moment.");
           return;
         }
 
-        await utils.tools.list.invalidate();
         toast.success(`${updatedTool.name} was updated successfully.`);
         return;
       }
 
-      const createdTool = await createToolMutation.mutateAsync(values);
+      const createdTool = await createTool(values);
 
       if (!createdTool) {
         toast.error("Tool registration failed. Try again to generate a new barcode.");
         return;
       }
 
-      await utils.tools.list.invalidate();
       form.reset(getDefaultValues());
       toast.success(`${createdTool.name} was registered and is ready for barcode printing.`);
     } catch {
-      toast.error("The request could not be completed. Try again once the database is available.");
+      toast.error("The request could not be completed. Try again once local storage is available.");
+    } finally {
+      setIsSaving(false);
     }
   });
-
-  const isSaving = createToolMutation.isPending || updateToolMutation.isPending;
 
   return (
     <Card className="border-0 shadow-none">

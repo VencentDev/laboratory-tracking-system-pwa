@@ -1,16 +1,33 @@
 "use client";
 
-import { trpc } from "@/core/lib/trpc-client";
+import { useLiveQuery } from "dexie-react-hooks";
+
+import { getToolByBarcode, listTools } from "@/features/inventory/lib/tool-repository";
 
 export function useTools() {
-  return trpc.tools.list.useQuery();
+  const data = useLiveQuery(() => listTools(), []);
+
+  return {
+    data,
+    isLoading: data === undefined,
+  };
 }
 
 export function useToolByBarcode(barcode: string) {
-  return trpc.tools.byBarcode.useQuery(
-    { barcode },
-    {
-      enabled: barcode.trim().length > 0,
+  const trimmedBarcode = barcode.trim();
+  const data = useLiveQuery(
+    async () => {
+      if (!trimmedBarcode) {
+        return null;
+      }
+
+      return getToolByBarcode(trimmedBarcode);
     },
+    [trimmedBarcode],
   );
+
+  return {
+    data: trimmedBarcode ? data : null,
+    isLoading: Boolean(trimmedBarcode) && data === undefined,
+  };
 }

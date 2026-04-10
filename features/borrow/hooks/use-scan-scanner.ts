@@ -147,14 +147,14 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
         setPendingReturn(result);
         clearBarcodeInput();
       } catch {
-        toast.error("Connection error", {
-          description: "Could not load the item details. Check your connection and try again.",
+        toast.error("Preview failed", {
+          description: "Could not load the item details from local storage. Try again.",
           duration: 6000,
         });
 
         setScanResult({
           type: "error",
-          message: "Could not load the item details. Check your connection and try again.",
+          message: "Could not load the item details from local storage. Try again.",
         });
       } finally {
         setIsPreviewLoading(false);
@@ -189,14 +189,14 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
       setPendingReturn(null);
       handleScanSuccess(result, "return");
     } catch {
-      toast.error("Connection error", {
-        description: "Could not reach the server. Check your connection and try again.",
+      toast.error("Return failed", {
+        description: "Could not write the return transaction to local storage. Try again.",
         duration: 6000,
       });
 
       setScanResult({
         type: "error",
-        message: "Could not record the transaction. Check your connection and try again.",
+        message: "Could not record the transaction in local storage. Try again.",
       });
     }
   }, [pendingReturn, processScan, handleScanError, handleScanSuccess]);
@@ -270,15 +270,14 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
         // Success response (has 'action' property)
         handleScanSuccess(result, mode);
       } catch {
-        // Network error or unexpected failure
-        toast.error("Connection error", {
-          description: "Could not reach the server. Check your connection and try again.",
+        toast.error("Borrow failed", {
+          description: "Could not record the transaction in local storage. Try again.",
           duration: 6000,
         });
 
         setScanResult({
           type: "error",
-          message: "Could not record the transaction. Check your connection and try again.",
+          message: "Could not record the transaction in local storage. Try again.",
         });
       }
     },

@@ -1,25 +1,56 @@
 "use client";
 
-import { trpc } from "@/core/lib/trpc-client";
+import { useLiveQuery } from "dexie-react-hooks";
+
+import {
+  getBorrowerById,
+  getBorrowerBySchoolId,
+  listBorrowers,
+} from "@/features/borrowers/lib/borrower-repository";
 
 export function useBorrowers() {
-  return trpc.borrowers.list.useQuery();
+  const data = useLiveQuery(() => listBorrowers(), []);
+
+  return {
+    data,
+    isLoading: data === undefined,
+  };
 }
 
 export function useBorrower(id: string) {
-  return trpc.borrowers.byId.useQuery(
-    { id },
-    {
-      enabled: id.trim().length > 0,
+  const trimmedId = id.trim();
+  const data = useLiveQuery(
+    async () => {
+      if (!trimmedId) {
+        return null;
+      }
+
+      return getBorrowerById(trimmedId);
     },
+    [trimmedId],
   );
+
+  return {
+    data: trimmedId ? data : null,
+    isLoading: Boolean(trimmedId) && data === undefined,
+  };
 }
 
 export function useBorrowerBySchoolId(schoolId: string) {
-  return trpc.borrowers.bySchoolId.useQuery(
-    { schoolId },
-    {
-      enabled: schoolId.trim().length > 0,
+  const trimmedSchoolId = schoolId.trim();
+  const data = useLiveQuery(
+    async () => {
+      if (!trimmedSchoolId) {
+        return null;
+      }
+
+      return getBorrowerBySchoolId(trimmedSchoolId);
     },
+    [trimmedSchoolId],
   );
+
+  return {
+    data: trimmedSchoolId ? data : null,
+    isLoading: Boolean(trimmedSchoolId) && data === undefined,
+  };
 }

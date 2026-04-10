@@ -2,15 +2,16 @@
 
 import { useMemo } from "react";
 
-import { trpc } from "@/core/lib/trpc-client";
 import { PageHeader } from "@/core/ui/page-header";
+import { useTransactions } from "@/features/borrow/hooks/use-borrow";
 import { ItemLogHistoryTable } from "@/features/inventory/components/item-log-history-table";
 import { ToolStatusSummaryCards } from "@/features/inventory/components/tool-status-summary-cards";
+import { useTools } from "@/features/inventory/hooks/use-tools";
 import { buildToolStatusSummary } from "@/features/inventory/lib/item-log-analytics";
 
 export function ItemLogsPageContent() {
-  const { data: tools, isLoading } = trpc.tools.list.useQuery();
-  const { data: transactions, isLoading: isTransactionsLoading } = trpc.borrow.listTransactions.useQuery();
+  const { data: tools, isLoading } = useTools();
+  const { data: transactions, isLoading: isTransactionsLoading } = useTransactions();
   const toolStatusSummary = useMemo(() => buildToolStatusSummary(tools ?? []), [tools]);
 
   return (

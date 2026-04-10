@@ -1,12 +1,4 @@
-export type ToolStatus = "available" | "borrowed" | "missing";
+import type { ToolRecord, ToolStatus } from "@/core/db/schema";
 
-export type ToolProfile = {
-  id: number;
-  barcode: string;
-  name: string;
-  description: string | null;
-  category: string | null;
-  currentStatus: ToolStatus;
-  createdAt: Date;
-  updatedAt: Date;
-};
+export type { ToolStatus };
+export type ToolProfile = ToolRecord;

@@ -1,3 +1,5 @@
+import type { ToolStatus, TransactionType } from "@/core/db/schema";
+
 export type ScanMode = "borrow" | "return";
 
 export type ScanErrorCode =
@@ -25,7 +27,7 @@ export type ReturnPreview = {
   toolName: string;
   barcode: string;
   borrowerName: string;
-  currentStatus: "borrowed" | "missing";
+  currentStatus: Exclude<ToolStatus, "available">;
   category: string | null;
   description: string | null;
   lastBorrowedAt: Date | null;
@@ -41,6 +43,6 @@ export type TransactionRecord = {
   barcode: string;
   toolName: string;
   borrowerName: string;
-  transactionType: "borrowed" | "returned" | "correction";
+  transactionType: TransactionType;
   recordedAt: Date;
 };

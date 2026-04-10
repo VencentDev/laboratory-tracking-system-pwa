@@ -4,11 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { PencilIcon, Trash2Icon } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { trpc } from "@/core/lib/trpc-client";
 import { Button } from "@/core/ui/button";
 import { DataTable, DataTableCell, DataTableHeaderCell, DataTableSurface } from "@/core/ui/data-table";
 import { TablePagination } from "@/core/ui/table-pagination";
 import { BorrowerAvatar } from "@/features/borrowers/components/borrower-avatar";
+import { useBorrowers } from "@/features/borrowers/hooks/use-borrower";
+import { deleteBorrower } from "@/features/borrowers/lib/borrower-repository";
 import type { BorrowerProfile } from "@/features/borrowers/types";
 
 type BorrowerListProps = {
@@ -22,9 +23,8 @@ const PAGE_SIZE = 10;
 export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: BorrowerListProps) {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const utils = trpc.useUtils();
-  const { data: borrowers, isLoading } = trpc.borrowers.list.useQuery();
-  const deleteBorrowerMutation = trpc.borrowers.delete.useMutation();
+  const [deletingBorrowerId, setDeletingBorrowerId] = useState<string | null>(null);
+  const { data: borrowers, isLoading } = useBorrowers();
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -61,21 +61,19 @@ export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: B
     }
 
     setMessage(null);
+    setDeletingBorrowerId(borrower.id);
 
     try {
-      const deletedBorrower = await deleteBorrowerMutation.mutateAsync({ id: borrower.id });
+      const deletedBorrower = await deleteBorrower(borrower.id);
 
       if (!deletedBorrower) {
         setMessage({
           type: "error",
-          text: "The borrower could not be deleted. Try again once the database is available.",
+          text: "The borrower could not be deleted. Try again once local storage is available.",
         });
         return;
       }
 
-      await utils.borrowers.list.invalidate();
-      await utils.borrowers.byId.invalidate({ id: borrower.id });
-      await utils.borrowers.bySchoolId.invalidate({ schoolId: borrower.schoolId });
       setMessage({
         type: "success",
         text: `${deletedBorrower.name} was removed from the borrower registry.`,
@@ -83,8 +81,10 @@ export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: B
     } catch {
       setMessage({
         type: "error",
-        text: "The borrower could not be deleted. Try again once the database is available.",
+        text: "The borrower could not be deleted. Try again once local storage is available.",
       });
+    } finally {
+      setDeletingBorrowerId(null);
     }
   }
 
@@ -157,7 +157,7 @@ export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: B
           </thead>
           <tbody>
             {paginatedBorrowers.map((borrower) => {
-              const isDeleting = deleteBorrowerMutation.isPending && deleteBorrowerMutation.variables?.id === borrower.id;
+              const isDeleting = deletingBorrowerId === borrower.id;
 
               return (
                 <tr key={borrower.id}>

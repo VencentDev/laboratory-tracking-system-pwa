@@ -1,29 +1,44 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
-import { trpc } from "@/core/lib/trpc-client";
+import { useLiveQuery } from "dexie-react-hooks";
+
+import {
+  listTransactions,
+  previewReturnTransaction,
+  processScanTransaction,
+} from "@/features/borrow/lib/borrow-repository";
+import type { ScanInput } from "@/features/borrow/lib/validations";
 
 export function useTransactions() {
-  return trpc.borrow.listTransactions.useQuery();
+  const data = useLiveQuery(() => listTransactions(), []);
+
+  return {
+    data,
+    isLoading: data === undefined,
+  };
 }
 
 export function usePreviewReturn() {
-  const utils = trpc.useUtils();
-
-  return useCallback(
-    async (barcode: string) => utils.borrow.previewReturn.fetch({ barcode }),
-    [utils],
-  );
+  return useCallback(async (barcode: string) => previewReturnTransaction(barcode), []);
 }
 
 export function useProcessScan() {
-  const utils = trpc.useUtils();
+  const [isPending, setIsPending] = useState(false);
 
-  return trpc.borrow.processScan.useMutation({
-    onSuccess: async () => {
-      await utils.tools.list.invalidate();
-      await utils.borrow.listTransactions.invalidate();
-    },
-  });
+  const mutateAsync = useCallback(async ({ barcode, mode, borrowerId }: ScanInput) => {
+    setIsPending(true);
+
+    try {
+      return await processScanTransaction(barcode, mode, borrowerId);
+    } finally {
+      setIsPending(false);
+    }
+  }, []);
+
+  return {
+    isPending,
+    mutateAsync,
+  };
 }

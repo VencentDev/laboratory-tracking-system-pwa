@@ -5,25 +5,22 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
-import { trpc } from "@/core/lib/trpc-client";
 import { Button } from "@/core/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/core/ui/card";
 import { Input } from "@/core/ui/input";
 import { OverlappingField } from "@/core/ui/overlapping-field";
 import { BorrowerTypeSelector } from "@/features/borrowers/components/borrower-type-selector";
+import { createBorrower, updateBorrower } from "@/features/borrowers/lib/borrower-repository";
 import { borrowerSchema, type BorrowerInput } from "@/features/borrowers/lib/validations";
 import type { BorrowerProfile } from "@/features/borrowers/types";
 
 type BorrowerFormProps = {
   borrower?: BorrowerProfile;
-  mode?: "create" | "edit";
 };
 
-export function BorrowerForm({ borrower, mode = borrower ? "edit" : "create" }: BorrowerFormProps) {
+export function BorrowerForm({ borrower }: BorrowerFormProps) {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const utils = trpc.useUtils();
-  const createBorrowerMutation = trpc.borrowers.create.useMutation();
-  const updateBorrowerMutation = trpc.borrowers.update.useMutation();
+  const [isSaving, setIsSaving] = useState(false);
   const form = useForm<BorrowerInput>({
     resolver: zodResolver(borrowerSchema),
     defaultValues: {
@@ -45,31 +42,25 @@ export function BorrowerForm({ borrower, mode = borrower ? "edit" : "create" }: 
     }
 
     setMessage(null);
+    setIsSaving(true);
 
     try {
       if (borrower) {
-        const updatedBorrower = await updateBorrowerMutation.mutateAsync({
-          id: borrower.id,
-          ...values,
-        });
+        const updatedBorrower = await updateBorrower(borrower.id, values);
 
         if (!updatedBorrower) {
           setMessage({
             type: "error",
-            text: "Borrower details could not be updated. Try again once the database is available.",
+            text: "Borrower details could not be updated. Check for duplicate school IDs and try again.",
           });
           return;
         }
 
-        await utils.borrowers.list.invalidate();
-        await utils.borrowers.byId.invalidate({ id: borrower.id });
-        await utils.borrowers.bySchoolId.invalidate({ schoolId: borrower.schoolId });
-        await utils.borrowers.bySchoolId.invalidate({ schoolId: values.schoolId });
         toast.success(`${updatedBorrower.name} was updated successfully.`);
         return;
       }
 
-      const createdBorrower = await createBorrowerMutation.mutateAsync(values);
+      const createdBorrower = await createBorrower(values);
 
       if (!createdBorrower) {
         setMessage({
@@ -79,7 +70,6 @@ export function BorrowerForm({ borrower, mode = borrower ? "edit" : "create" }: 
         return;
       }
 
-      await utils.borrowers.list.invalidate();
       form.reset({
         schoolId: "",
         name: "",
@@ -93,12 +83,13 @@ export function BorrowerForm({ borrower, mode = borrower ? "edit" : "create" }: 
     } catch {
       setMessage({
         type: "error",
-        text: "The request could not be completed. Try again once the database is available.",
+        text: "The request could not be completed. Try again once local storage is available.",
       });
+    } finally {
+      setIsSaving(false);
     }
   });
 
-  const isSaving = !isReadOnly && (createBorrowerMutation.isPending || updateBorrowerMutation.isPending);
   const selectedType = useWatch({
     control: form.control,
     name: "type",

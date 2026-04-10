@@ -12,7 +12,6 @@ import {
   DialogTitle,
 } from "@/core/ui/dialog";
 import { PageHeader } from "@/core/ui/page-header";
-import { BarcodeDisplay } from "@/features/inventory/components/barcode-display";
 import { ToolForm } from "@/features/inventory/components/tool-form";
 import { ToolList } from "@/features/inventory/components/tool-list";
 import type { ToolProfile } from "@/features/inventory/types";
@@ -20,7 +19,6 @@ import type { ToolProfile } from "@/features/inventory/types";
 export function AddItemsPageContent() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedTool, setSelectedTool] = useState<ToolProfile | undefined>();
-  const [barcodeTool, setBarcodeTool] = useState<ToolProfile | null>(null);
 
   function openCreateToolDialog() {
     setSelectedTool(undefined);
@@ -46,7 +44,7 @@ export function AddItemsPageContent() {
         }
       />
 
-      <ToolList onEdit={openEditToolDialog} onViewBarcode={setBarcodeTool} />
+      <ToolList onEdit={openEditToolDialog} />
 
       <Dialog
         open={isFormOpen}
@@ -68,20 +66,6 @@ export function AddItemsPageContent() {
             </DialogDescription>
           </DialogHeader>
           <ToolForm key={selectedTool?.id ?? "create"} tool={selectedTool} />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={Boolean(barcodeTool)} onOpenChange={(open) => !open && setBarcodeTool(null)}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>{barcodeTool?.name ?? "Tool Barcode"}</DialogTitle>
-            <DialogDescription>
-              Print or copy this barcode label before the tool moves into the active inventory workflow.
-            </DialogDescription>
-          </DialogHeader>
-          {barcodeTool ? (
-            <BarcodeDisplay enableContextMenu={false} itemName={barcodeTool.name} value={barcodeTool.barcode} />
-          ) : null}
         </DialogContent>
       </Dialog>
     </div>
