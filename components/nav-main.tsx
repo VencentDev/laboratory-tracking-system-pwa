@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -25,6 +26,7 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 import { ChevronRightIcon } from "lucide-react";
 
 export function NavMain({
@@ -44,6 +46,19 @@ export function NavMain({
   const pathname = usePathname();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const [hasMounted, setHasMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  function isRouteActive(url: Route) {
+    if (!hasMounted) {
+      return false;
+    }
+
+    return pathname === url || pathname.startsWith(`${url}/`);
+  }
 
   return (
     <SidebarGroup>
@@ -52,7 +67,7 @@ export function NavMain({
         {items.map((item) => {
           const hasChildren = Boolean(item.items?.length);
           const hasActiveChild = item.items?.some(
-            (subItem) => pathname === subItem.url || pathname.startsWith(`${subItem.url}/`)
+            (subItem) => isRouteActive(subItem.url)
           );
 
           if (hasChildren && item.items) {
@@ -64,7 +79,14 @@ export function NavMain({
                 >
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <SidebarMenuButton tooltip={item.title} isActive={hasActiveChild}>
+                      <SidebarMenuButton
+                        tooltip={item.title}
+                        isActive={hasActiveChild}
+                        className={cn(
+                          hasActiveChild &&
+                            "bg-sidebar-primary/12 text-sidebar-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border)),inset_3px_0_0_hsl(var(--sidebar-primary))]",
+                        )}
+                      >
                         {item.icon}
                         <span className="sr-only">{item.title}</span>
                       </SidebarMenuButton>
@@ -77,8 +99,7 @@ export function NavMain({
                       className="w-30 min-w-0 rounded-lg p-1"
                     >
                       {item.items.map((subItem) => {
-                        const isActive =
-                          pathname === subItem.url || pathname.startsWith(`${subItem.url}/`);
+                        const isActive = isRouteActive(subItem.url);
 
                         return (
                           <DropdownMenuItem
@@ -107,7 +128,14 @@ export function NavMain({
               >
                 <SidebarMenuItem className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
                   <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip={item.title} isActive={hasActiveChild}>
+                    <SidebarMenuButton
+                      tooltip={item.title}
+                      isActive={hasActiveChild}
+                      className={cn(
+                        hasActiveChild &&
+                          "bg-sidebar-primary/12 text-sidebar-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border)),inset_3px_0_0_hsl(var(--sidebar-primary))]",
+                      )}
+                    >
                       {item.icon}
                       <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
                       <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden" />
@@ -116,12 +144,18 @@ export function NavMain({
                   <CollapsibleContent>
                     <SidebarMenuSub>
                       {item.items.map((subItem) => {
-                        const isActive =
-                          pathname === subItem.url || pathname.startsWith(`${subItem.url}/`);
+                        const isActive = isRouteActive(subItem.url);
 
                         return (
                           <SidebarMenuSubItem key={subItem.title}>
-                            <SidebarMenuSubButton asChild isActive={isActive}>
+                            <SidebarMenuSubButton
+                              asChild
+                              isActive={isActive}
+                              className={cn(
+                                isActive &&
+                                  "bg-sidebar-primary/10 text-sidebar-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border)),inset_2px_0_0_hsl(var(--sidebar-primary))]",
+                              )}
+                            >
                               <Link href={subItem.url}>
                                 <span>{subItem.title}</span>
                               </Link>
@@ -140,6 +174,8 @@ export function NavMain({
             return null;
           }
 
+          const isItemActive = isRouteActive(item.url);
+
           return (
             <SidebarMenuItem
               key={item.title}
@@ -148,7 +184,11 @@ export function NavMain({
               <SidebarMenuButton
                 asChild
                 tooltip={item.title}
-                isActive={pathname === item.url || pathname.startsWith(`${item.url}/`)}
+                isActive={isItemActive}
+                className={cn(
+                  isItemActive &&
+                    "bg-sidebar-primary/12 text-sidebar-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border)),inset_3px_0_0_hsl(var(--sidebar-primary))]",
+                )}
               >
                 <Link href={item.url}>
                   {item.icon}

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
 export function HomeRedirectPageContent() {
-  redirect("/item-logs");
+  redirect("/scan");
   return null;
 }

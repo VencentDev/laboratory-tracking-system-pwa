@@ -29,9 +29,15 @@ function isStandaloneDisplayMode() {
 
 export function useInstallPrompt() {
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(() => isStandaloneDisplayMode());
+  const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
+    const syncInstalledState = () => {
+      setIsInstalled(isStandaloneDisplayMode());
+    };
+
+    const frameId = window.requestAnimationFrame(syncInstalledState);
+
     const handleBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
       setInstallEvent(event as BeforeInstallPromptEvent);
@@ -46,6 +52,7 @@ export function useInstallPrompt() {
     window.addEventListener("appinstalled", handleInstalled);
 
     return () => {
+      window.cancelAnimationFrame(frameId);
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleInstalled);
     };

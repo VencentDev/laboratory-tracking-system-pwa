@@ -32,7 +32,7 @@ function formatTimestamp(value?: string | null) {
 export function SettingsPageContent() {
   const importInputRef = useRef<HTMLInputElement>(null);
   const [isWorking, setIsWorking] = useState<null | "backup" | "import" | "clear" | "seed" | "install">(null);
-  const [isOnline, setIsOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
+  const [isOnline, setIsOnline] = useState(true);
   const lastBackup = useLiveQuery(() => getAppSetting("lastBackupAt"), []);
   const lastRestore = useLiveQuery(() => getAppSetting("lastRestoreAt"), []);
   const { isInstallable, isInstalled, promptInstall } = useInstallPrompt();

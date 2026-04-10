@@ -3,6 +3,7 @@
 import * as React from "react";
 import type { Route } from "next";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { NavMain } from "@/components/nav-main";
 import {
@@ -22,6 +23,7 @@ import {
   SquareUserRoundIcon,
   WrenchIcon,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type SidebarNavItem = {
   title: string;
@@ -77,6 +79,16 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = usePathname();
+  const [hasMounted, setHasMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  const isSettingsActive =
+    hasMounted && (pathname === "/settings" || pathname.startsWith("/settings/"));
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="gap-4 border-b border-sidebar-border/70 px-3 py-4">
@@ -98,7 +110,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter className="border-t border-sidebar-border/70 px-3 py-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Settings">
+            <SidebarMenuButton
+              asChild
+              tooltip="Settings"
+              isActive={isSettingsActive}
+              className={cn(
+                isSettingsActive &&
+                  "bg-sidebar-primary/12 text-sidebar-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border)),inset_3px_0_0_hsl(var(--sidebar-primary))]",
+              )}
+            >
               <Link href="/settings">
                 <Settings2Icon />
                 <span>Settings</span>
