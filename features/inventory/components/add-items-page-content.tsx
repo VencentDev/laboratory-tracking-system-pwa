@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { PlusIcon } from "lucide-react";
 
+import { exportToolsCsv } from "@/core/backup/export-data";
+import { importToolsCsv } from "@/core/backup/import-data";
 import { Button } from "@/core/ui/button";
+import { CsvTransferActions } from "@/core/ui/csv-transfer-actions";
 import {
   Dialog,
   DialogContent,
@@ -37,10 +40,17 @@ export function AddItemsPageContent() {
         title="Manage Items"
         description="Register barcode-labeled tools, maintain inventory records, and print labels directly from the catalog."
         actions={
-          <Button type="button" className="gap-2 px-5" onClick={openCreateToolDialog}>
-            <PlusIcon className="h-4 w-4" />
-            Add Tool
-          </Button>
+          <>
+            <CsvTransferActions
+              label="tools"
+              onExport={exportToolsCsv}
+              onImport={importToolsCsv}
+            />
+            <Button type="button" className="gap-2 px-5" onClick={openCreateToolDialog}>
+              <PlusIcon className="h-4 w-4" />
+              Add Tool
+            </Button>
+          </>
         }
       />
 

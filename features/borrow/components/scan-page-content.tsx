@@ -1,6 +1,9 @@
 "use client";
 
+import { exportTransactionsCsv } from "@/core/backup/export-data";
+import { importTransactionsCsv } from "@/core/backup/import-data";
 import { Button } from "@/core/ui/button";
+import { CsvTransferActions } from "@/core/ui/csv-transfer-actions";
 import { PageHeader } from "@/core/ui/page-header";
 import { BorrowSummaryCards } from "@/features/borrow/components/borrow-summary-cards";
 import { ReturnReviewDialog } from "@/features/borrow/components/return-review-dialog";
@@ -52,6 +55,13 @@ export function ScanPageContent() {
         description="Start a borrow or return flow with focused scanner input, then review the latest recorded transactions below."
         actions={
           <div className="flex gap-2">
+            <CsvTransferActions
+              label="recent activity"
+              exportLabel="Export recent activity CSV"
+              importLabel="Import recent activity CSV"
+              onExport={exportTransactionsCsv}
+              onImport={importTransactionsCsv}
+            />
             <Button type="button" className="px-5" onClick={() => openScanner("borrow")}>
               Borrow
             </Button>

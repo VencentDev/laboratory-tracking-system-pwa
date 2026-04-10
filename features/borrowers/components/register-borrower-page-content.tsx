@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { SearchIcon, SquareUserRoundIcon, X } from "lucide-react";
 
+import { exportBorrowersCsv } from "@/core/backup/export-data";
+import { importBorrowersCsv } from "@/core/backup/import-data";
 import { Button } from "@/core/ui/button";
+import { CsvTransferActions } from "@/core/ui/csv-transfer-actions";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/core/ui/dialog";
 import { Input } from "@/core/ui/input";
 import { PageHeader } from "@/core/ui/page-header";
@@ -38,10 +41,17 @@ export function RegisterBorrowerPageContent() {
         title="Manage Borrowers"
         description="Create and maintain borrower records with the identity details needed for accountability and reporting."
         actions={
-          <Button type="button" className="gap-2 px-5" onClick={openCreateBorrowerDialog}>
-            <SquareUserRoundIcon className="h-4 w-4" />
-            Record Borrower
-          </Button>
+          <>
+            <CsvTransferActions
+              label="borrowers"
+              onExport={exportBorrowersCsv}
+              onImport={importBorrowersCsv}
+            />
+            <Button type="button" className="gap-2 px-5" onClick={openCreateBorrowerDialog}>
+              <SquareUserRoundIcon className="h-4 w-4" />
+              Record Borrower
+            </Button>
+          </>
         }
       />
 

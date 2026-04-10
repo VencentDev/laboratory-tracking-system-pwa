@@ -3,6 +3,7 @@
 import { appDb } from "@/core/db/app-db";
 import { setAppSetting } from "@/core/db/app-settings";
 import { BACKUP_SCHEMA_VERSION, type AppBackup } from "@/core/db/schema";
+import { buildCsv, buildTimestampLabel, downloadCsv } from "@/core/lib/csv";
 
 function toBackup() {
   return appDb.transaction(
@@ -47,25 +48,6 @@ function toBackup() {
   );
 }
 
-function escapeCsvValue(value: string | number | null | undefined) {
-  const normalizedValue = value == null ? "" : String(value);
-
-  if (!/[",\n]/.test(normalizedValue)) {
-    return normalizedValue;
-  }
-
-  return `"${normalizedValue.replaceAll('"', '""')}"`;
-}
-
-function buildCsv(headers: string[], rows: Array<Array<string | number | null | undefined>>) {
-  const lines = [
-    headers.join(","),
-    ...rows.map((row) => row.map((value) => escapeCsvValue(value)).join(",")),
-  ];
-
-  return `${lines.join("\n")}\n`;
-}
-
 function downloadBlob(blob: Blob, filename: string) {
   const downloadUrl = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -75,10 +57,6 @@ function downloadBlob(blob: Blob, filename: string) {
   link.click();
 
   URL.revokeObjectURL(downloadUrl);
-}
-
-function buildTimestampLabel() {
-  return new Date().toISOString().replaceAll(":", "-");
 }
 
 export async function exportJsonBackup() {
@@ -92,6 +70,24 @@ export async function exportJsonBackup() {
   await setAppSetting("lastBackupAt", new Date().toISOString());
 
   return backup;
+}
+
+export async function exportToolsCsv() {
+  const tools = await appDb.tools.orderBy("createdAt").reverse().toArray();
+  const csv = buildCsv(
+    ["Barcode", "Name", "Category", "Status", "Description", "Created At", "Updated At"],
+    tools.map((tool) => [
+      tool.barcode,
+      tool.name,
+      tool.category,
+      tool.currentStatus,
+      tool.description,
+      tool.createdAt.toISOString(),
+      tool.updatedAt.toISOString(),
+    ]),
+  );
+
+  downloadCsv(csv, `lab-tools-${buildTimestampLabel()}.csv`);
 }
 
 export async function exportBorrowersCsv() {
@@ -118,21 +114,29 @@ export async function exportBorrowersCsv() {
 
 export async function exportTransactionsCsv() {
   const transactions = await appDb.transactions.orderBy("recordedAt").reverse().toArray();
+  const borrowerSchoolIds = await Promise.all(
+    transactions.map(async (transaction) => {
+      if (!transaction.borrowerId) {
+        return "";
+      }
+
+      const borrower = await appDb.borrowers.get(transaction.borrowerId);
+
+      return borrower?.schoolId ?? "";
+    }),
+  );
   const csv = buildCsv(
-    ["Barcode", "Tool", "Borrower", "Transaction Type", "Recorded At", "Notes"],
-    transactions.map((transaction) => [
+    ["Barcode", "Tool", "Borrower", "Borrower School ID", "Transaction Type", "Recorded At", "Notes"],
+    transactions.map((transaction, index) => [
       transaction.barcode,
       transaction.toolName,
       transaction.borrowerName,
+      borrowerSchoolIds[index],
       transaction.transactionType,
       transaction.recordedAt.toISOString(),
       transaction.notes,
     ]),
   );
 
-  downloadBlob(
-    new Blob([csv], { type: "text/csv;charset=utf-8" }),
-    `lab-transactions-${buildTimestampLabel()}.csv`,
-  );
+  downloadCsv(csv, `lab-transactions-${buildTimestampLabel()}.csv`);
 }
-
