@@ -23,7 +23,6 @@ import {
   SquareUserRoundIcon,
   WrenchIcon,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 type SidebarNavItem = {
   title: string;
@@ -110,15 +109,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter className="border-t border-sidebar-border/70 px-3 py-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              tooltip="Settings"
-              isActive={isSettingsActive}
-              className={cn(
-                isSettingsActive &&
-                  "bg-sidebar-primary/12 text-sidebar-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border)),inset_3px_0_0_hsl(var(--sidebar-primary))]",
-              )}
-            >
+            <SidebarMenuButton asChild tooltip="Settings" isActive={isSettingsActive}>
               <Link href="/settings">
                 <Settings2Icon />
                 <span>Settings</span>

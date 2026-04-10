@@ -26,7 +26,6 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
 import { ChevronRightIcon } from "lucide-react";
 
 export function NavMain({
@@ -79,14 +78,7 @@ export function NavMain({
                 >
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <SidebarMenuButton
-                        tooltip={item.title}
-                        isActive={hasActiveChild}
-                        className={cn(
-                          hasActiveChild &&
-                            "bg-sidebar-primary/12 text-sidebar-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border)),inset_3px_0_0_hsl(var(--sidebar-primary))]",
-                        )}
-                      >
+                      <SidebarMenuButton tooltip={item.title} isActive={hasActiveChild}>
                         {item.icon}
                         <span className="sr-only">{item.title}</span>
                       </SidebarMenuButton>
@@ -128,14 +120,7 @@ export function NavMain({
               >
                 <SidebarMenuItem className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
                   <CollapsibleTrigger asChild>
-                    <SidebarMenuButton
-                      tooltip={item.title}
-                      isActive={hasActiveChild}
-                      className={cn(
-                        hasActiveChild &&
-                          "bg-sidebar-primary/12 text-sidebar-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border)),inset_3px_0_0_hsl(var(--sidebar-primary))]",
-                      )}
-                    >
+                    <SidebarMenuButton tooltip={item.title} isActive={hasActiveChild}>
                       {item.icon}
                       <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
                       <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden" />
@@ -148,14 +133,7 @@ export function NavMain({
 
                         return (
                           <SidebarMenuSubItem key={subItem.title}>
-                            <SidebarMenuSubButton
-                              asChild
-                              isActive={isActive}
-                              className={cn(
-                                isActive &&
-                                  "bg-sidebar-primary/10 text-sidebar-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border)),inset_2px_0_0_hsl(var(--sidebar-primary))]",
-                              )}
-                            >
+                            <SidebarMenuSubButton asChild isActive={isActive}>
                               <Link href={subItem.url}>
                                 <span>{subItem.title}</span>
                               </Link>
@@ -181,15 +159,7 @@ export function NavMain({
               key={item.title}
               className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center"
             >
-              <SidebarMenuButton
-                asChild
-                tooltip={item.title}
-                isActive={isItemActive}
-                className={cn(
-                  isItemActive &&
-                    "bg-sidebar-primary/12 text-sidebar-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border)),inset_3px_0_0_hsl(var(--sidebar-primary))]",
-                )}
-              >
+              <SidebarMenuButton asChild tooltip={item.title} isActive={isItemActive}>
                 <Link href={item.url}>
                   {item.icon}
                   <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
