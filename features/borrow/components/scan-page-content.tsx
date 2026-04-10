@@ -1,0 +1,111 @@
+"use client";
+
+import { Button } from "@/core/ui/button";
+import { PageHeader } from "@/core/ui/page-header";
+import { BorrowSummaryCards } from "@/features/borrow/components/borrow-summary-cards";
+import { ReturnReviewDialog } from "@/features/borrow/components/return-review-dialog";
+import { BorrowTransactionHistory } from "@/features/borrow/components/borrow-transaction-history";
+import { ToolScanDialog } from "@/features/borrow/components/tool-scan-dialog";
+import { useBorrowers } from "@/features/borrowers/hooks/use-borrower";
+import { useScanScanner } from "@/features/borrow/hooks/use-scan-scanner";
+import { useTransactions } from "@/features/borrow/hooks/use-borrow";
+
+export function ScanPageContent() {
+  const { data: transactions, isLoading: isTransactionsLoading } = useTransactions();
+  const { data: borrowers, isLoading: isBorrowersLoading } = useBorrowers();
+
+  const {
+    isOpen,
+    mode,
+    selectedBorrowerId,
+    pendingReturn,
+    barcodeRef,
+    isSubmitting,
+    openScanner,
+    closeScanner,
+    setSelectedBorrowerId,
+    handleSubmit,
+    cancelPendingReturn,
+    confirmPendingReturn,
+  } = useScanScanner({
+    autoClearOnSuccess: true,
+    autoCloseOnSuccess: true,
+  });
+
+  const totalTransactions = transactions?.length ?? 0;
+  const borrowedCount =
+    transactions?.filter((t) => t.transactionType === "borrowed").length ?? 0;
+  const returnedCount =
+    transactions?.filter((t) => t.transactionType === "returned").length ?? 0;
+
+  function handleOpenChange(open: boolean) {
+    if (!open) {
+      closeScanner();
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Scanning"
+        title="Borrow & Return"
+        description="Start a borrow or return flow with focused scanner input, then review the latest recorded transactions below."
+        actions={
+          <div className="flex gap-2">
+            <Button type="button" className="px-5" onClick={() => openScanner("borrow")}>
+              Borrow
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="px-5"
+              onClick={() => openScanner("return")}
+            >
+              Return
+            </Button>
+          </div>
+        }
+      />
+
+      <BorrowSummaryCards
+        isLoading={isTransactionsLoading}
+        totalTransactions={totalTransactions}
+        borrowedCount={borrowedCount}
+        returnedCount={returnedCount}
+      />
+
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold tracking-[-0.02em] text-foreground">
+            Recent activity
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Filter transaction history by date, borrower, or transaction type to confirm each checkout or return as it happens.
+          </p>
+        </div>
+        <BorrowTransactionHistory isLoading={isTransactionsLoading} transactions={transactions ?? []} />
+      </div>
+
+      <ToolScanDialog
+        mode={mode}
+        open={isOpen}
+        onOpenChange={handleOpenChange}
+        selectedBorrowerId={selectedBorrowerId}
+        onBorrowerChange={setSelectedBorrowerId}
+        borrowers={borrowers ?? []}
+        isBorrowersLoading={isBorrowersLoading}
+        isSubmitting={isSubmitting}
+        keepBarcodeFocused={mode === "return" && pendingReturn === null}
+        barcodeRef={barcodeRef}
+        onSubmit={handleSubmit}
+      />
+
+      <ReturnReviewDialog
+        pendingReturn={pendingReturn}
+        isSubmitting={isSubmitting}
+        onCancel={cancelPendingReturn}
+        onConfirm={confirmPendingReturn}
+      />
+    </div>
+  );
+}
