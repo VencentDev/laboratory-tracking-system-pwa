@@ -8,6 +8,10 @@ function normalizeOptionalText(value?: string) {
   return trimmedValue ? trimmedValue : null;
 }
 
+function isActiveBorrower(borrower: BorrowerProfile | undefined | null): borrower is BorrowerProfile {
+  return Boolean(borrower && !borrower.deletedAt);
+}
+
 function normalizeYearLevel(value?: string) {
   const trimmedValue = value?.trim();
 
@@ -31,7 +35,15 @@ async function schoolIdBelongsToAnotherBorrower(schoolId: string, borrowerId?: s
 }
 
 export async function listBorrowers(): Promise<BorrowerProfile[]> {
-  return appDb.borrowers.orderBy("createdAt").reverse().toArray();
+  const borrowers = await appDb.borrowers.orderBy("createdAt").reverse().toArray();
+
+  return borrowers.filter(isActiveBorrower);
+}
+
+export async function listDeletedBorrowers(): Promise<BorrowerProfile[]> {
+  const borrowers = await appDb.borrowers.orderBy("deletedAt").reverse().toArray();
+
+  return borrowers.filter((borrower): borrower is BorrowerProfile => Boolean(borrower.deletedAt));
 }
 
 export async function getBorrowerById(id: string) {
@@ -41,7 +53,9 @@ export async function getBorrowerById(id: string) {
     return null;
   }
 
-  return (await appDb.borrowers.get(trimmedId)) ?? null;
+  const borrower = await appDb.borrowers.get(trimmedId);
+
+  return isActiveBorrower(borrower) ? borrower : null;
 }
 
 export async function getBorrowerBySchoolId(schoolId: string) {
@@ -51,7 +65,9 @@ export async function getBorrowerBySchoolId(schoolId: string) {
     return null;
   }
 
-  return (await appDb.borrowers.where("schoolId").equals(trimmedSchoolId).first()) ?? null;
+  const borrower = await appDb.borrowers.where("schoolId").equals(trimmedSchoolId).first();
+
+  return isActiveBorrower(borrower) ? borrower : null;
 }
 
 export async function createBorrower(data: BorrowerInput) {
@@ -74,6 +90,7 @@ export async function createBorrower(data: BorrowerInput) {
       section: normalizeOptionalText(data.section),
       contactNumber: normalizeOptionalText(data.contactNumber),
       createdAt: new Date(),
+      deletedAt: null,
     };
 
     await appDb.borrowers.add(borrower);
@@ -89,7 +106,7 @@ export async function updateBorrower(id: string, data: BorrowerInput) {
     const existingBorrower = await appDb.borrowers.get(id);
     const schoolId = data.schoolId.trim();
 
-    if (!existingBorrower || (await schoolIdBelongsToAnotherBorrower(schoolId, id))) {
+    if (!isActiveBorrower(existingBorrower) || (await schoolIdBelongsToAnotherBorrower(schoolId, id))) {
       return null;
     }
 
@@ -111,17 +128,16 @@ export async function updateBorrower(id: string, data: BorrowerInput) {
 
 export async function deleteBorrower(id: string) {
   try {
-    return await appDb.transaction("rw", appDb.borrowers, appDb.transactions, async () => {
+    return await appDb.transaction("rw", appDb.borrowers, async () => {
       const existingBorrower = await appDb.borrowers.get(id);
 
-      if (!existingBorrower) {
+      if (!isActiveBorrower(existingBorrower)) {
         return null;
       }
 
-      await appDb.transactions.where("borrowerId").equals(id).modify({
-        borrowerId: null,
+      await appDb.borrowers.update(id, {
+        deletedAt: new Date(),
       });
-      await appDb.borrowers.delete(id);
 
       return existingBorrower;
     });
@@ -130,3 +146,22 @@ export async function deleteBorrower(id: string) {
   }
 }
 
+export async function restoreBorrower(id: string) {
+  try {
+    return await appDb.transaction("rw", appDb.borrowers, async () => {
+      const existingBorrower = await appDb.borrowers.get(id);
+
+      if (!existingBorrower?.deletedAt) {
+        return null;
+      }
+
+      await appDb.borrowers.update(id, {
+        deletedAt: null,
+      });
+
+      return (await appDb.borrowers.get(id)) ?? null;
+    });
+  } catch {
+    return null;
+  }
+}

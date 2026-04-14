@@ -28,6 +28,7 @@ const serializedToolSchema = z.object({
   currentStatus: z.enum(["available", "borrowed", "missing"]),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  deletedAt: z.string().datetime().nullable().optional(),
 });
 
 const serializedBorrowerSchema = z.object({
@@ -42,6 +43,7 @@ const serializedBorrowerSchema = z.object({
   section: z.string().nullable(),
   contactNumber: z.string().nullable(),
   createdAt: z.string().datetime(),
+  deletedAt: z.string().datetime().nullable().optional(),
 });
 
 const serializedTransactionSchema = z.object({
@@ -50,6 +52,7 @@ const serializedTransactionSchema = z.object({
   barcode: z.string().min(1),
   toolName: z.string().min(1),
   borrowerId: z.string().nullable(),
+  borrowerSchoolId: z.string().nullable().optional(),
   borrowerName: z.string().min(1),
   transactionType: z.enum(["borrowed", "returned", "correction"]),
   recordedAt: z.string().datetime(),
@@ -107,6 +110,7 @@ export async function restoreBackup(backupInput: AppBackup | z.infer<typeof appB
             ...tool,
             createdAt: new Date(tool.createdAt),
             updatedAt: new Date(tool.updatedAt),
+            deletedAt: tool.deletedAt ? new Date(tool.deletedAt) : null,
           })),
         );
       }
@@ -116,6 +120,7 @@ export async function restoreBackup(backupInput: AppBackup | z.infer<typeof appB
           backup.data.borrowers.map((borrower) => ({
             ...borrower,
             createdAt: new Date(borrower.createdAt),
+            deletedAt: borrower.deletedAt ? new Date(borrower.deletedAt) : null,
           })),
         );
       }
@@ -124,6 +129,7 @@ export async function restoreBackup(backupInput: AppBackup | z.infer<typeof appB
         await appDb.transactions.bulkAdd(
           backup.data.transactions.map((transaction) => ({
             ...transaction,
+            borrowerSchoolId: transaction.borrowerSchoolId ?? null,
             recordedAt: new Date(transaction.recordedAt),
           })),
         );
@@ -235,6 +241,7 @@ export async function importToolsCsv(file: File): Promise<CsvImportSummary> {
         description: normalizeOptionalText(getCsvValue(row, "Description")),
         createdAt: existingTool?.createdAt ?? createdAt,
         updatedAt,
+        deletedAt: null,
       };
 
       if (existingTool) {
@@ -277,6 +284,7 @@ export async function importBorrowersCsv(file: File): Promise<CsvImportSummary> 
         section: normalizeOptionalText(getCsvValue(row, "Section")),
         contactNumber: normalizeOptionalText(getCsvValue(row, "Contact Number")),
         createdAt: existingBorrower?.createdAt ?? parseOptionalDate(getCsvValue(row, "Created At")),
+        deletedAt: null,
       };
 
       if (existingBorrower) {
@@ -308,6 +316,7 @@ export async function importTransactionsCsv(file: File): Promise<CsvImportSummar
           transaction.barcode,
           transaction.borrowerId ?? "",
           transaction.borrowerName,
+          transaction.borrowerSchoolId ?? "",
           transaction.transactionType,
           transaction.recordedAt.toISOString(),
         ].join("|"),
@@ -333,15 +342,17 @@ export async function importTransactionsCsv(file: File): Promise<CsvImportSummar
         continue;
       }
 
-      const borrowerSchoolId = getCsvValue(row, "Borrower School ID", "School ID").trim();
-      const borrower = borrowerSchoolId
-        ? await appDb.borrowers.where("schoolId").equals(borrowerSchoolId).first()
+      const importedBorrowerSchoolId = getCsvValue(row, "Borrower School ID", "School ID").trim();
+      const borrower = importedBorrowerSchoolId
+        ? await appDb.borrowers.where("schoolId").equals(importedBorrowerSchoolId).first()
         : null;
       const borrowerName = borrower?.name ?? (getCsvValue(row, "Borrower").trim() || "Unknown borrower");
+      const borrowerSchoolId = borrower?.schoolId ?? (importedBorrowerSchoolId || null);
       const dedupeKey = [
         barcode,
         borrower?.id ?? "",
         borrowerName,
+        borrowerSchoolId ?? "",
         transactionTypeValue,
         recordedAt.toISOString(),
       ].join("|");
@@ -356,6 +367,7 @@ export async function importTransactionsCsv(file: File): Promise<CsvImportSummar
         barcode: tool.barcode,
         toolName: getCsvValue(row, "Tool").trim() || tool.name,
         borrowerId: borrower?.id ?? null,
+        borrowerSchoolId,
         borrowerName,
         transactionType: transactionTypeValue,
         recordedAt,

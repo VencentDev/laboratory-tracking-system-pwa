@@ -51,6 +51,7 @@ export function BorrowTransactionHistory({ isLoading, transactions }: BorrowTran
           const searchLower = borrowerSearch.toLowerCase();
           return (
             transaction.borrowerName.toLowerCase().includes(searchLower) ||
+            (transaction.borrowerSchoolId?.toLowerCase().includes(searchLower) ?? false) ||
             transaction.toolName.toLowerCase().includes(searchLower) ||
             transaction.barcode.toLowerCase().includes(searchLower)
           );
@@ -99,7 +100,7 @@ export function BorrowTransactionHistory({ isLoading, transactions }: BorrowTran
           <div className="relative w-full flex-1 sm:min-w-[250px]">
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Search by borrower, tool, or barcode..."
+              placeholder="Search by borrower, school ID, tool, or barcode..."
               value={borrowerSearch}
               onChange={(e) => handleBorrowerSearchChange(e.target.value)}
               className="pl-9 pr-10 h-10 w-full bg-background"
@@ -211,7 +212,14 @@ export function BorrowTransactionHistory({ isLoading, transactions }: BorrowTran
                       {formatTransactionType(transaction.transactionType)}
                     </span>
                   </DataTableCell>
-                  <DataTableCell>{transaction.borrowerName}</DataTableCell>
+                  <DataTableCell>
+                    <div className="min-w-0">
+                      <div className="truncate">{transaction.borrowerName}</div>
+                      {transaction.borrowerSchoolId ? (
+                        <div className="truncate text-xs text-muted-foreground">{transaction.borrowerSchoolId}</div>
+                      ) : null}
+                    </div>
+                  </DataTableCell>
                   <DataTableCell>{formatRecordedAt(transaction.recordedAt)}</DataTableCell>
                 </tr>
               ))}

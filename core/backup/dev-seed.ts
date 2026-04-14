@@ -22,6 +22,7 @@ export function buildDevSeedBackup(): AppBackup {
           currentStatus: "available",
           createdAt: daysAgo(20),
           updatedAt: daysAgo(2),
+          deletedAt: null,
         },
         {
           id: 2,
@@ -32,6 +33,7 @@ export function buildDevSeedBackup(): AppBackup {
           currentStatus: "borrowed",
           createdAt: daysAgo(18),
           updatedAt: daysAgo(1),
+          deletedAt: null,
         },
         {
           id: 3,
@@ -42,6 +44,7 @@ export function buildDevSeedBackup(): AppBackup {
           currentStatus: "available",
           createdAt: daysAgo(15),
           updatedAt: daysAgo(4),
+          deletedAt: null,
         },
         {
           id: 4,
@@ -52,6 +55,7 @@ export function buildDevSeedBackup(): AppBackup {
           currentStatus: "available",
           createdAt: daysAgo(12),
           updatedAt: daysAgo(3),
+          deletedAt: null,
         },
       ],
       borrowers: [
@@ -67,6 +71,7 @@ export function buildDevSeedBackup(): AppBackup {
           section: "B",
           contactNumber: "09171234567",
           createdAt: daysAgo(19),
+          deletedAt: null,
         },
         {
           id: "student-2",
@@ -80,6 +85,7 @@ export function buildDevSeedBackup(): AppBackup {
           section: "A",
           contactNumber: "09179876543",
           createdAt: daysAgo(17),
+          deletedAt: null,
         },
         {
           id: "staff-1",
@@ -93,6 +99,7 @@ export function buildDevSeedBackup(): AppBackup {
           section: null,
           contactNumber: "09170001122",
           createdAt: daysAgo(16),
+          deletedAt: null,
         },
       ],
       transactions: [
@@ -102,6 +109,7 @@ export function buildDevSeedBackup(): AppBackup {
           barcode: formatToolBarcode(2),
           toolName: "Soldering Station",
           borrowerId: "student-2",
+          borrowerSchoolId: "2024-0002",
           borrowerName: "Marco Villanueva",
           transactionType: "borrowed",
           recordedAt: daysAgo(1),
@@ -113,6 +121,7 @@ export function buildDevSeedBackup(): AppBackup {
           barcode: formatToolBarcode(1),
           toolName: "Digital Microscope",
           borrowerId: "student-1",
+          borrowerSchoolId: "2024-0001",
           borrowerName: "Alyssa Ramos",
           transactionType: "borrowed",
           recordedAt: daysAgo(8),
@@ -124,6 +133,7 @@ export function buildDevSeedBackup(): AppBackup {
           barcode: formatToolBarcode(1),
           toolName: "Digital Microscope",
           borrowerId: "student-1",
+          borrowerSchoolId: "2024-0001",
           borrowerName: "Alyssa Ramos",
           transactionType: "returned",
           recordedAt: daysAgo(6),
@@ -135,6 +145,7 @@ export function buildDevSeedBackup(): AppBackup {
           barcode: formatToolBarcode(3),
           toolName: "Oscilloscope",
           borrowerId: "staff-1",
+          borrowerSchoolId: "STAFF-014",
           borrowerName: "Engr. Denise Cruz",
           transactionType: "borrowed",
           recordedAt: daysAgo(5),
@@ -146,6 +157,7 @@ export function buildDevSeedBackup(): AppBackup {
           barcode: formatToolBarcode(3),
           toolName: "Oscilloscope",
           borrowerId: "staff-1",
+          borrowerSchoolId: "STAFF-014",
           borrowerName: "Engr. Denise Cruz",
           transactionType: "returned",
           recordedAt: daysAgo(4),
@@ -162,4 +174,3 @@ export function buildDevSeedBackup(): AppBackup {
     },
   };
 }
-

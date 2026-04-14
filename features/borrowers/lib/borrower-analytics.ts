@@ -28,7 +28,11 @@ export function buildBorrowerAnalytics(
   transactions: TransactionRecord[],
 ): BorrowerAnalyticsRow[] {
   return borrowers.map((borrower) => {
-    const borrowerTransactions = transactions.filter((transaction) => transaction.borrowerName === borrower.name);
+    const borrowerTransactions = transactions.filter(
+      (transaction) =>
+        transaction.borrowerSchoolId === borrower.schoolId ||
+        (!transaction.borrowerSchoolId && transaction.borrowerName === borrower.name),
+    );
     const borrowedCount = borrowerTransactions.filter((transaction) => transaction.transactionType === "borrowed").length;
     const returnedCount = borrowerTransactions.filter((transaction) => transaction.transactionType === "returned").length;
     const outstandingCount = Math.max(0, borrowedCount - returnedCount);

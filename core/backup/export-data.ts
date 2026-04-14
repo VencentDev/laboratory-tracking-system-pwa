@@ -29,10 +29,12 @@ function toBackup() {
             ...tool,
             createdAt: tool.createdAt.toISOString(),
             updatedAt: tool.updatedAt.toISOString(),
+            deletedAt: tool.deletedAt?.toISOString() ?? null,
           })),
           borrowers: borrowers.map((borrower) => ({
             ...borrower,
             createdAt: borrower.createdAt.toISOString(),
+            deletedAt: borrower.deletedAt?.toISOString() ?? null,
           })),
           transactions: transactions.map((transaction) => ({
             ...transaction,
@@ -73,7 +75,7 @@ export async function exportJsonBackup() {
 }
 
 export async function exportToolsCsv() {
-  const tools = await appDb.tools.orderBy("createdAt").reverse().toArray();
+  const tools = (await appDb.tools.orderBy("createdAt").reverse().toArray()).filter((tool) => !tool.deletedAt);
   const csv = buildCsv(
     ["Barcode", "Name", "Category", "Status", "Description", "Created At", "Updated At"],
     tools.map((tool) => [
@@ -91,7 +93,9 @@ export async function exportToolsCsv() {
 }
 
 export async function exportBorrowersCsv() {
-  const borrowers = await appDb.borrowers.orderBy("createdAt").reverse().toArray();
+  const borrowers = (await appDb.borrowers.orderBy("createdAt").reverse().toArray()).filter(
+    (borrower) => !borrower.deletedAt,
+  );
   const csv = buildCsv(
     ["School ID", "Name", "Type", "Program", "Year Level", "Section", "Contact Number", "Created At"],
     borrowers.map((borrower) => [
@@ -114,24 +118,13 @@ export async function exportBorrowersCsv() {
 
 export async function exportTransactionsCsv() {
   const transactions = await appDb.transactions.orderBy("recordedAt").reverse().toArray();
-  const borrowerSchoolIds = await Promise.all(
-    transactions.map(async (transaction) => {
-      if (!transaction.borrowerId) {
-        return "";
-      }
-
-      const borrower = await appDb.borrowers.get(transaction.borrowerId);
-
-      return borrower?.schoolId ?? "";
-    }),
-  );
   const csv = buildCsv(
     ["Barcode", "Tool", "Borrower", "Borrower School ID", "Transaction Type", "Recorded At", "Notes"],
-    transactions.map((transaction, index) => [
+    transactions.map((transaction) => [
       transaction.barcode,
       transaction.toolName,
       transaction.borrowerName,
-      borrowerSchoolIds[index],
+      transaction.borrowerSchoolId ?? "",
       transaction.transactionType,
       transaction.recordedAt.toISOString(),
       transaction.notes,
