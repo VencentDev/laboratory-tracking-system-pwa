@@ -2,10 +2,23 @@
 
 import { useLiveQuery } from "dexie-react-hooks";
 
-import { getToolByBarcode, listTools } from "@/features/inventory/lib/tool-repository";
+import {
+  getToolByBarcode,
+  listDeletedTools,
+  listTools,
+} from "@/features/inventory/lib/tool-repository";
 
 export function useTools() {
   const data = useLiveQuery(() => listTools(), []);
+
+  return {
+    data,
+    isLoading: data === undefined,
+  };
+}
+
+export function useDeletedTools() {
+  const data = useLiveQuery(() => listDeletedTools(), []);
 
   return {
     data,

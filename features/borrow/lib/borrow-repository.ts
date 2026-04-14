@@ -47,6 +47,7 @@ export async function listTransactions(): Promise<TransactionRecord[]> {
     id: transaction.id,
     barcode: transaction.barcode,
     toolName: transaction.toolName,
+    borrowerSchoolId: transaction.borrowerSchoolId,
     borrowerName: transaction.borrowerName,
     transactionType: transaction.transactionType,
     recordedAt: transaction.recordedAt,
@@ -63,7 +64,7 @@ export async function processScanTransaction(
       const trimmedBarcode = barcode.trim();
       const tool = await appDb.tools.where("barcode").equals(trimmedBarcode).first();
 
-      if (!tool) {
+      if (!tool || tool.deletedAt) {
         return createScanError("NOT_FOUND");
       }
 
@@ -78,7 +79,7 @@ export async function processScanTransaction(
 
         const borrower = await appDb.borrowers.get(borrowerId);
 
-        if (!borrower) {
+        if (!borrower || borrower.deletedAt) {
           return createScanError("DB_ERROR");
         }
 
@@ -88,6 +89,7 @@ export async function processScanTransaction(
           barcode: tool.barcode,
           toolName: tool.name,
           borrowerId: borrower.id,
+          borrowerSchoolId: borrower.schoolId,
           borrowerName: borrower.name,
           transactionType: "borrowed",
           recordedAt,
@@ -129,6 +131,7 @@ export async function processScanTransaction(
         barcode: tool.barcode,
         toolName: tool.name,
         borrowerId: lastBorrowTransaction?.borrowerId ?? null,
+        borrowerSchoolId: lastBorrowTransaction?.borrowerSchoolId ?? null,
         borrowerName,
         transactionType: "returned",
         recordedAt,
@@ -161,7 +164,7 @@ export async function previewReturnTransaction(
     const trimmedBarcode = barcode.trim();
     const tool = await appDb.tools.where("barcode").equals(trimmedBarcode).first();
 
-    if (!tool) {
+    if (!tool || tool.deletedAt) {
       return createScanError("NOT_FOUND");
     }
 

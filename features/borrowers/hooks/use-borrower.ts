@@ -5,11 +5,21 @@ import { useLiveQuery } from "dexie-react-hooks";
 import {
   getBorrowerById,
   getBorrowerBySchoolId,
+  listDeletedBorrowers,
   listBorrowers,
 } from "@/features/borrowers/lib/borrower-repository";
 
 export function useBorrowers() {
   const data = useLiveQuery(() => listBorrowers(), []);
+
+  return {
+    data,
+    isLoading: data === undefined,
+  };
+}
+
+export function useDeletedBorrowers() {
+  const data = useLiveQuery(() => listDeletedBorrowers(), []);
 
   return {
     data,

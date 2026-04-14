@@ -176,17 +176,17 @@ export function ToolList({ onEdit }: ToolListProps) {
       const deletedTool = await deleteTool(toolPendingDelete.id);
 
       if (!deletedTool) {
-        toast.error("The tool could not be deleted. Try again once local storage is available.");
+        toast.error("The tool could not be moved to trash. Try again once local storage is available.");
         return;
       }
 
       setSelectedToolIds((currentSelectedToolIds) =>
         currentSelectedToolIds.filter((currentToolId) => currentToolId !== toolPendingDelete.id),
       );
-      toast.success(`${deletedTool.name} was deleted from the inventory list.`);
+      toast.success(`${deletedTool.name} was moved to trash.`);
       setToolPendingDelete(null);
     } catch {
-      toast.error("The tool could not be deleted. Try again once local storage is available.");
+      toast.error("The tool could not be moved to trash. Try again once local storage is available.");
     } finally {
       setDeletingToolId(null);
     }
@@ -205,7 +205,7 @@ export function ToolList({ onEdit }: ToolListProps) {
       const deletedTools = await deleteTools(toolIdsToDelete);
 
       if (!deletedTools?.length) {
-        toast.error("The selected tools could not be deleted. Try again once local storage is available.");
+        toast.error("The selected tools could not be moved to trash. Try again once local storage is available.");
         return;
       }
 
@@ -216,12 +216,12 @@ export function ToolList({ onEdit }: ToolListProps) {
       );
       toast.success(
         deletedTools.length === 1
-          ? `${deletedTools[0].name} was deleted from the inventory list.`
-          : `${deletedTools.length} tools were deleted from the inventory list.`,
+          ? `${deletedTools[0].name} was moved to trash.`
+          : `${deletedTools.length} tools were moved to trash.`,
       );
       setSelectedToolsPendingDelete([]);
     } catch {
-      toast.error("The selected tools could not be deleted. Try again once local storage is available.");
+      toast.error("The selected tools could not be moved to trash. Try again once local storage is available.");
     } finally {
       setIsDeletingSelectedTools(false);
     }
@@ -317,7 +317,7 @@ export function ToolList({ onEdit }: ToolListProps) {
               disabled={selectedFilteredTools.length === 0 || isDeletingSelectedTools}
               onClick={() => setSelectedToolsPendingDelete(selectedFilteredTools)}
             >
-              Delete Selected
+              Move Selected To Trash
               {selectedFilteredTools.length ? ` (${selectedFilteredTools.length})` : ""}
             </Button>
           </div>
@@ -466,13 +466,13 @@ export function ToolList({ onEdit }: ToolListProps) {
             setToolPendingDelete(null);
           }
         }}
-        title="Are you absolutely sure you want to delete?"
+        title="Move this tool to trash?"
         description={
           toolPendingDelete
-            ? `This action cannot be undone. ${toolPendingDelete.name} (${toolPendingDelete.barcode}) will be permanently removed from the inventory catalog.`
-            : "This action cannot be undone."
+            ? `${toolPendingDelete.name} (${toolPendingDelete.barcode}) will be hidden from the inventory catalog until you restore it from Trash.`
+            : "This tool will be moved to trash until you restore it."
         }
-        confirmLabel="Delete tool"
+        confirmLabel="Move to trash"
         isPending={deletingToolId === toolPendingDelete?.id}
         onConfirm={handleDelete}
       />
@@ -484,9 +484,9 @@ export function ToolList({ onEdit }: ToolListProps) {
             setSelectedToolsPendingDelete([]);
           }
         }}
-        title="Delete selected tools?"
+        title="Move selected tools to trash?"
         description={formatBulkDeleteDescription(selectedToolsPendingDelete)}
-        confirmLabel={selectedToolsPendingDelete.length === 1 ? "Delete tool" : "Delete tools"}
+        confirmLabel={selectedToolsPendingDelete.length === 1 ? "Move to trash" : "Move to trash"}
         isPending={isDeletingSelectedTools}
         onConfirm={handleDeleteSelectedTools}
       />
@@ -496,7 +496,7 @@ export function ToolList({ onEdit }: ToolListProps) {
 
 function formatBulkDeleteDescription(tools: ToolProfile[]) {
   if (tools.length === 0) {
-    return "This action cannot be undone.";
+    return "These tools will be moved to trash until you restore them.";
   }
 
   const toolSummaries = tools.slice(0, 3).map((tool) => `${tool.name} (${tool.barcode})`);
@@ -506,5 +506,5 @@ function formatBulkDeleteDescription(tools: ToolProfile[]) {
       ? `${toolSummaries.join(", ")}, and ${remainingToolCount} more tool${remainingToolCount === 1 ? "" : "s"}`
       : toolSummaries.join(", ");
 
-  return `This action cannot be undone. ${toolList} will be permanently removed from the inventory catalog.`;
+  return `${toolList} will be hidden from the inventory catalog until you restore ${tools.length === 1 ? "it" : "them"} from Trash.`;
 }

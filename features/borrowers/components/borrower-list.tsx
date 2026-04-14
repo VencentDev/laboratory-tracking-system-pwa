@@ -66,14 +66,14 @@ export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: B
       const deletedBorrower = await deleteBorrower(borrowerPendingDelete.id);
 
       if (!deletedBorrower) {
-        toast.error("The borrower could not be deleted. Try again once local storage is available.");
+        toast.error("The borrower could not be moved to trash. Try again once local storage is available.");
         return;
       }
 
-      toast.success(`${deletedBorrower.name} was removed from the borrower registry.`);
+      toast.success(`${deletedBorrower.name} was moved to trash.`);
       setBorrowerPendingDelete(null);
     } catch {
-      toast.error("The borrower could not be deleted. Try again once local storage is available.");
+      toast.error("The borrower could not be moved to trash. Try again once local storage is available.");
     } finally {
       setDeletingBorrowerId(null);
     }
@@ -199,13 +199,13 @@ export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: B
             setBorrowerPendingDelete(null);
           }
         }}
-        title="Are you absolutely sure you want to delete?"
+        title="Move this borrower to trash?"
         description={
           borrowerPendingDelete
-            ? `This action cannot be undone. ${borrowerPendingDelete.name} (${borrowerPendingDelete.schoolId}) will be permanently removed from the borrower registry.`
-            : "This action cannot be undone."
+            ? `${borrowerPendingDelete.name} (${borrowerPendingDelete.schoolId}) will be hidden from the borrower registry until you restore the record from Trash.`
+            : "This borrower will be moved to trash until you restore the record."
         }
-        confirmLabel="Delete borrower"
+        confirmLabel="Move to trash"
         isPending={deletingBorrowerId === borrowerPendingDelete?.id}
         onConfirm={handleDelete}
       />

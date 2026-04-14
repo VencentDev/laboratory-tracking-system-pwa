@@ -1,6 +1,6 @@
 export const APP_DB_NAME = "laboratory-tracking-system-pwa";
-export const APP_DB_VERSION = 1;
-export const BACKUP_SCHEMA_VERSION = 1;
+export const APP_DB_VERSION = 3;
+export const BACKUP_SCHEMA_VERSION = 3;
 
 export type ToolStatus = "available" | "borrowed" | "missing";
 export type TransactionType = "borrowed" | "returned" | "correction";
@@ -15,6 +15,7 @@ export type ToolRecord = {
   currentStatus: ToolStatus;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt: Date | null;
 };
 
 export type BorrowerRecord = {
@@ -29,6 +30,7 @@ export type BorrowerRecord = {
   section: string | null;
   contactNumber: string | null;
   createdAt: Date;
+  deletedAt: Date | null;
 };
 
 export type ToolTransactionRecord = {
@@ -37,6 +39,7 @@ export type ToolTransactionRecord = {
   barcode: string;
   toolName: string;
   borrowerId: string | null;
+  borrowerSchoolId: string | null;
   borrowerName: string;
   transactionType: TransactionType;
   recordedAt: Date;
@@ -49,13 +52,15 @@ export type AppSettingRecord = {
   updatedAt: Date;
 };
 
-export type SerializedToolRecord = Omit<ToolRecord, "createdAt" | "updatedAt"> & {
+export type SerializedToolRecord = Omit<ToolRecord, "createdAt" | "updatedAt" | "deletedAt"> & {
   createdAt: string;
   updatedAt: string;
+  deletedAt: string | null;
 };
 
-export type SerializedBorrowerRecord = Omit<BorrowerRecord, "createdAt"> & {
+export type SerializedBorrowerRecord = Omit<BorrowerRecord, "createdAt" | "deletedAt"> & {
   createdAt: string;
+  deletedAt: string | null;
 };
 
 export type SerializedToolTransactionRecord = Omit<ToolTransactionRecord, "recordedAt"> & {
@@ -77,4 +82,3 @@ export type AppBackup = {
     appSettings: SerializedAppSettingRecord[];
   };
 };
-
