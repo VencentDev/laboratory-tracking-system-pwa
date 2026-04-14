@@ -25,7 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  ChevronUpIcon,
+  ChevronRightIcon,
   PackagePlusIcon,
   QrCodeIcon,
   Settings2Icon,
@@ -128,10 +128,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <SidebarMenuButton tooltip="Settings" isActive={isSettingsActive}>
                   <Settings2Icon />
                   <span>Settings</span>
-                  <ChevronUpIcon className="ml-auto group-data-[collapsible=icon]:hidden" />
+                  <ChevronRightIcon className="ml-auto group-data-[collapsible=icon]:hidden" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="end" className="group-data-[collapsible=icon]:min-w-[12rem]">
+              <DropdownMenuContent side="right" align="end" className="group-data-[collapsible=icon]:min-w-[12rem]">
                 <DropdownMenuLabel>Workspace</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild className={pathname === "/settings" ? "bg-accent text-accent-foreground" : undefined}>
