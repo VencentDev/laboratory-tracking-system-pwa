@@ -17,10 +17,20 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  ChevronUpIcon,
   PackagePlusIcon,
   QrCodeIcon,
   Settings2Icon,
   SquareUserRoundIcon,
+  Trash2Icon,
   WrenchIcon,
 } from "lucide-react";
 
@@ -86,7 +96,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }, []);
 
   const isSettingsActive =
-    hasMounted && (pathname === "/settings" || pathname.startsWith("/settings/"));
+    hasMounted &&
+    (pathname === "/settings" ||
+      pathname.startsWith("/settings/") ||
+      pathname === "/trash" ||
+      pathname.startsWith("/trash/"));
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -109,12 +123,31 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter className="border-t border-sidebar-border/70 px-3 py-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Settings" isActive={isSettingsActive}>
-              <Link href="/settings">
-                <Settings2Icon />
-                <span>Settings</span>
-              </Link>
-            </SidebarMenuButton>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton tooltip="Settings" isActive={isSettingsActive}>
+                  <Settings2Icon />
+                  <span>Settings</span>
+                  <ChevronUpIcon className="ml-auto group-data-[collapsible=icon]:hidden" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="end" className="group-data-[collapsible=icon]:min-w-[12rem]">
+                <DropdownMenuLabel>Workspace</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild className={pathname === "/settings" ? "bg-accent text-accent-foreground" : undefined}>
+                  <Link href={"/settings" as Route}>
+                    <Settings2Icon />
+                    <span>Settings</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className={pathname === "/trash" ? "bg-accent text-accent-foreground" : undefined}>
+                  <Link href={"/trash" as Route}>
+                    <Trash2Icon />
+                    <span>Trash</span>
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

@@ -42,6 +42,7 @@ export type TransactionRecord = {
   id: number;
   barcode: string;
   toolName: string;
+  borrowerSchoolId: string | null;
   borrowerName: string;
   transactionType: TransactionType;
   recordedAt: Date;
