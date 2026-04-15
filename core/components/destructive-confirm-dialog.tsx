@@ -20,6 +20,7 @@ type DestructiveConfirmDialogProps = {
   description: string;
   confirmLabel?: string;
   isPending?: boolean;
+  pendingLabel?: string;
   onConfirm: () => Promise<void> | void;
 };
 
@@ -30,6 +31,7 @@ export function DestructiveConfirmDialog({
   description,
   confirmLabel = "Delete",
   isPending = false,
+  pendingLabel = "Deleting...",
   onConfirm,
 }: DestructiveConfirmDialogProps) {
   return (
@@ -52,7 +54,7 @@ export function DestructiveConfirmDialog({
               void onConfirm();
             }}
           >
-            {isPending ? "Deleting..." : confirmLabel}
+            {isPending ? pendingLabel : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

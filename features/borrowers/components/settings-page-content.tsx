@@ -12,6 +12,7 @@ import {
   exportTransactionsCsv,
 } from "@/core/backup/export-data";
 import { clearAllLocalData, parseBackupFile, restoreBackup } from "@/core/backup/import-data";
+import { DestructiveConfirmDialog } from "@/core/components/destructive-confirm-dialog";
 import { getAppSetting } from "@/core/db/app-settings";
 import { useInstallPrompt } from "@/core/pwa/use-install-prompt";
 import { Button } from "@/core/ui/button";
@@ -32,6 +33,7 @@ function formatTimestamp(value?: string | null) {
 export function SettingsPageContent() {
   const importInputRef = useRef<HTMLInputElement>(null);
   const [isWorking, setIsWorking] = useState<null | "backup" | "import" | "clear" | "seed" | "install">(null);
+  const [isClearDataDialogOpen, setIsClearDataDialogOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const lastBackup = useLiveQuery(() => getAppSetting("lastBackupAt"), []);
   const lastRestore = useLiveQuery(() => getAppSetting("lastRestoreAt"), []);
@@ -112,19 +114,12 @@ export function SettingsPageContent() {
   }
 
   async function handleClearLocalData() {
-    const confirmed = window.confirm(
-      "Clear all local tools, borrowers, transactions, and settings on this device? This cannot be undone without a backup.",
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
     setIsWorking("clear");
 
     try {
       await clearAllLocalData();
       toast.success("All local data has been cleared.");
+      setIsClearDataDialogOpen(false);
     } catch {
       toast.error("Local data could not be cleared.");
     } finally {
@@ -302,7 +297,7 @@ export function SettingsPageContent() {
               variant="destructive"
               className="w-full justify-start gap-2"
               disabled={isWorking === "clear"}
-              onClick={() => void handleClearLocalData()}
+              onClick={() => setIsClearDataDialogOpen(true)}
             >
               <EraserIcon className="h-4 w-4" />
               {isWorking === "clear" ? "Clearing local data..." : "Clear local data"}
@@ -313,6 +308,17 @@ export function SettingsPageContent() {
           </CardContent>
         </Card>
       </div>
+
+      <DestructiveConfirmDialog
+        open={isClearDataDialogOpen}
+        onOpenChange={setIsClearDataDialogOpen}
+        title="Clear all local data?"
+        description="All local tools, borrowers, transactions, and settings on this device will be removed. This cannot be undone without a backup."
+        confirmLabel="Clear local data"
+        pendingLabel="Clearing..."
+        isPending={isWorking === "clear"}
+        onConfirm={handleClearLocalData}
+      />
     </div>
   );
 }
