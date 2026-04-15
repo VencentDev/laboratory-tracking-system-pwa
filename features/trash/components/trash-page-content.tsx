@@ -9,7 +9,9 @@ import { PageHeader } from "@/core/ui/page-header";
 import { useDeletedBorrowers } from "@/features/borrowers/hooks/use-borrower";
 import { useDeletedTools } from "@/features/inventory/hooks/use-tools";
 import { TrashBorrowersTable } from "@/features/trash/components/trash-borrowers-table";
+import { TrashRetentionNotice } from "@/features/trash/components/trash-retention-notice";
 import { TrashToolsTable } from "@/features/trash/components/trash-tools-table";
+import { TRASH_RETENTION_DAYS } from "@/features/trash/lib/trash-retention";
 
 export function TrashPageContent() {
   const { data: deletedTools, isLoading: isToolsLoading } = useDeletedTools();
@@ -31,7 +33,7 @@ export function TrashPageContent() {
       <PageHeader
         eyebrow="Recovery"
         title="Trash"
-        description="Temporarily deleted tools and borrower records stay here until you restore them."
+        description={`Temporarily deleted tools and borrower records stay here for up to ${TRASH_RETENTION_DAYS} days before permanent removal.`}
         actions={
           <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/60 px-4 py-2 text-sm text-muted-foreground">
             <Trash2Icon className="h-4 w-4" />
@@ -39,6 +41,8 @@ export function TrashPageContent() {
           </div>
         }
       />
+
+      <TrashRetentionNotice />
 
       <div className="space-y-4">
         <div className="inline-flex w-full items-center gap-2 rounded-2xl border border-border/70 bg-card/50 p-2">

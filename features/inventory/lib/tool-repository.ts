@@ -2,6 +2,7 @@ import { appDb } from "@/core/db/app-db";
 import { formatToolBarcode } from "@/features/inventory/lib/barcode";
 import type { ToolInput } from "@/features/inventory/lib/validations";
 import type { ToolProfile } from "@/features/inventory/types";
+import { purgeExpiredTrashedTools } from "@/features/trash/lib/trash-cleanup";
 
 function normalizeOptionalText(value?: string) {
   const trimmedValue = value?.trim();
@@ -14,18 +15,24 @@ function isActiveTool(tool: ToolProfile | undefined | null): tool is ToolProfile
 }
 
 export async function listTools(): Promise<ToolProfile[]> {
+  await purgeExpiredTrashedTools();
+
   const tools = await appDb.tools.orderBy("createdAt").reverse().toArray();
 
   return tools.filter(isActiveTool);
 }
 
 export async function listDeletedTools(): Promise<ToolProfile[]> {
+  await purgeExpiredTrashedTools();
+
   const tools = await appDb.tools.orderBy("deletedAt").reverse().toArray();
 
   return tools.filter((tool): tool is ToolProfile => Boolean(tool.deletedAt));
 }
 
 export async function getToolByBarcode(barcode: string) {
+  await purgeExpiredTrashedTools();
+
   const trimmedBarcode = barcode.trim();
 
   if (!trimmedBarcode) {
@@ -38,6 +45,8 @@ export async function getToolByBarcode(barcode: string) {
 }
 
 export async function getToolById(id: number) {
+  await purgeExpiredTrashedTools();
+
   const tool = await appDb.tools.get(id);
 
   return isActiveTool(tool) ? tool : null;
@@ -45,6 +54,8 @@ export async function getToolById(id: number) {
 
 export async function createTool(data: ToolInput) {
   try {
+    await purgeExpiredTrashedTools();
+
     return await appDb.transaction("rw", appDb.tools, async () => {
       const now = new Date();
       const createdId = await appDb.tools.add({
@@ -72,6 +83,8 @@ export async function createTool(data: ToolInput) {
 
 export async function updateTool(id: number, data: ToolInput) {
   try {
+    await purgeExpiredTrashedTools();
+
     const existingTool = await appDb.tools.get(id);
 
     if (!isActiveTool(existingTool)) {
@@ -94,6 +107,8 @@ export async function updateTool(id: number, data: ToolInput) {
 
 export async function deleteTool(id: number) {
   try {
+    await purgeExpiredTrashedTools();
+
     return await appDb.transaction("rw", appDb.tools, async () => {
       const existingTool = await appDb.tools.get(id);
 
@@ -115,6 +130,8 @@ export async function deleteTool(id: number) {
 
 export async function deleteTools(ids: number[]) {
   try {
+    await purgeExpiredTrashedTools();
+
     const uniqueIds = Array.from(new Set(ids));
 
     if (uniqueIds.length === 0) {
@@ -146,6 +163,8 @@ export async function deleteTools(ids: number[]) {
 
 export async function restoreTool(id: number) {
   try {
+    await purgeExpiredTrashedTools();
+
     return await appDb.transaction("rw", appDb.tools, async () => {
       const existingTool = await appDb.tools.get(id);
 
@@ -159,6 +178,26 @@ export async function restoreTool(id: number) {
       });
 
       return (await appDb.tools.get(id)) ?? null;
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function permanentlyDeleteTool(id: number) {
+  try {
+    await purgeExpiredTrashedTools();
+
+    return await appDb.transaction("rw", appDb.tools, async () => {
+      const existingTool = await appDb.tools.get(id);
+
+      if (!existingTool?.deletedAt) {
+        return null;
+      }
+
+      await appDb.tools.delete(id);
+
+      return existingTool;
     });
   } catch {
     return null;

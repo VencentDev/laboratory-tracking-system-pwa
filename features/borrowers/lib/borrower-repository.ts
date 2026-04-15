@@ -1,6 +1,7 @@
 import { appDb } from "@/core/db/app-db";
 import type { BorrowerProfile } from "@/features/borrowers/types";
 import type { BorrowerInput } from "@/features/borrowers/lib/validations";
+import { purgeExpiredTrashedBorrowers } from "@/features/trash/lib/trash-cleanup";
 
 function normalizeOptionalText(value?: string) {
   const trimmedValue = value?.trim();
@@ -25,6 +26,8 @@ function normalizeYearLevel(value?: string) {
 }
 
 async function schoolIdBelongsToAnotherBorrower(schoolId: string, borrowerId?: string) {
+  await purgeExpiredTrashedBorrowers();
+
   const existingBorrower = await appDb.borrowers.where("schoolId").equals(schoolId).first();
 
   if (!existingBorrower) {
@@ -35,18 +38,24 @@ async function schoolIdBelongsToAnotherBorrower(schoolId: string, borrowerId?: s
 }
 
 export async function listBorrowers(): Promise<BorrowerProfile[]> {
+  await purgeExpiredTrashedBorrowers();
+
   const borrowers = await appDb.borrowers.orderBy("createdAt").reverse().toArray();
 
   return borrowers.filter(isActiveBorrower);
 }
 
 export async function listDeletedBorrowers(): Promise<BorrowerProfile[]> {
+  await purgeExpiredTrashedBorrowers();
+
   const borrowers = await appDb.borrowers.orderBy("deletedAt").reverse().toArray();
 
   return borrowers.filter((borrower): borrower is BorrowerProfile => Boolean(borrower.deletedAt));
 }
 
 export async function getBorrowerById(id: string) {
+  await purgeExpiredTrashedBorrowers();
+
   const trimmedId = id.trim();
 
   if (!trimmedId) {
@@ -59,6 +68,8 @@ export async function getBorrowerById(id: string) {
 }
 
 export async function getBorrowerBySchoolId(schoolId: string) {
+  await purgeExpiredTrashedBorrowers();
+
   const trimmedSchoolId = schoolId.trim();
 
   if (!trimmedSchoolId) {
@@ -128,6 +139,8 @@ export async function updateBorrower(id: string, data: BorrowerInput) {
 
 export async function deleteBorrower(id: string) {
   try {
+    await purgeExpiredTrashedBorrowers();
+
     return await appDb.transaction("rw", appDb.borrowers, async () => {
       const existingBorrower = await appDb.borrowers.get(id);
 
@@ -148,6 +161,8 @@ export async function deleteBorrower(id: string) {
 
 export async function restoreBorrower(id: string) {
   try {
+    await purgeExpiredTrashedBorrowers();
+
     return await appDb.transaction("rw", appDb.borrowers, async () => {
       const existingBorrower = await appDb.borrowers.get(id);
 
@@ -160,6 +175,26 @@ export async function restoreBorrower(id: string) {
       });
 
       return (await appDb.borrowers.get(id)) ?? null;
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function permanentlyDeleteBorrower(id: string) {
+  try {
+    await purgeExpiredTrashedBorrowers();
+
+    return await appDb.transaction("rw", appDb.borrowers, async () => {
+      const existingBorrower = await appDb.borrowers.get(id);
+
+      if (!existingBorrower?.deletedAt) {
+        return null;
+      }
+
+      await appDb.borrowers.delete(id);
+
+      return existingBorrower;
     });
   } catch {
     return null;
