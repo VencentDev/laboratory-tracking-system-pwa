@@ -5,9 +5,7 @@ import { ThemeToggle } from "@/core/components/theme-toggle";
 import { Button } from "@/core/ui/button";
 
 const links: Array<{ href: Route; label: string }> = [
-  { href: "/", label: "Home" },
-  { href: "/about", label: "About" },
-  { href: "/pricing", label: "Pricing" },
+  { href: "/", label: "Home" }
 ];
 
 export function Navbar() {

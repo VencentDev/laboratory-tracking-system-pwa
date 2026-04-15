@@ -1,15 +1,18 @@
 "use client";
 
-import { RotateCcwIcon } from "lucide-react";
+import { useState } from "react";
+import { RotateCcwIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
+import { DestructiveConfirmDialog } from "@/core/components/destructive-confirm-dialog";
 import { Button } from "@/core/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/core/ui/card";
 import { DataTable, DataTableCell, DataTableHeaderCell, DataTableSurface } from "@/core/ui/data-table";
 import { formatToolStatus, getToolStatusClasses } from "@/features/inventory/components/tool-card";
-import { restoreTool } from "@/features/inventory/lib/tool-repository";
+import { permanentlyDeleteTool, restoreTool } from "@/features/inventory/lib/tool-repository";
 import type { ToolProfile } from "@/features/inventory/types";
-import { formatTrashTimestamp } from "@/features/trash/lib/trash-formatters";
+import { formatTrashAutoDeleteLabel, formatTrashTimestamp } from "@/features/trash/lib/trash-formatters";
+import { TRASH_RETENTION_DAYS } from "@/features/trash/lib/trash-retention";
 
 type TrashToolsTableProps = {
   tools?: ToolProfile[];
@@ -17,23 +20,61 @@ type TrashToolsTableProps = {
 };
 
 export function TrashToolsTable({ tools, isLoading }: TrashToolsTableProps) {
+  const [restoringToolId, setRestoringToolId] = useState<number | null>(null);
+  const [toolPendingPermanentDelete, setToolPendingPermanentDelete] = useState<ToolProfile | null>(null);
+  const [deletingToolId, setDeletingToolId] = useState<number | null>(null);
 
   async function handleRestore(toolId: number, toolName: string) {
-    const restoredTool = await restoreTool(toolId);
+    setRestoringToolId(toolId);
 
-    if (!restoredTool) {
+    try {
+      const restoredTool = await restoreTool(toolId);
+
+      if (!restoredTool) {
+        toast.error("The tool could not be restored from trash.");
+        return;
+      }
+
+      toast.success(`${toolName} was restored to the inventory catalog.`);
+    } catch {
       toast.error("The tool could not be restored from trash.");
+    } finally {
+      setRestoringToolId(null);
+    }
+  }
+
+  async function handlePermanentDelete() {
+    if (!toolPendingPermanentDelete) {
       return;
     }
 
-    toast.success(`${toolName} was restored to the inventory catalog.`);
+    setDeletingToolId(toolPendingPermanentDelete.id);
+
+    try {
+      const deletedTool = await permanentlyDeleteTool(toolPendingPermanentDelete.id);
+
+      if (!deletedTool) {
+        toast.error("The tool could not be permanently deleted from trash.");
+        return;
+      }
+
+      toast.success(`${deletedTool.name} was permanently deleted.`);
+      setToolPendingPermanentDelete(null);
+    } catch {
+      toast.error("The tool could not be permanently deleted from trash.");
+    } finally {
+      setDeletingToolId(null);
+    }
   }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Trashed Tools</CardTitle>
-        <CardDescription>Restore deleted tools back to the active inventory list whenever needed.</CardDescription>
+        <CardDescription>
+          Restore deleted tools back to the active inventory list or permanently remove them. Trash
+          is cleared automatically after {TRASH_RETENTION_DAYS} days.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -44,7 +85,7 @@ export function TrashToolsTable({ tools, isLoading }: TrashToolsTableProps) {
           </div>
         ) : (
           <DataTableSurface>
-            <DataTable className="min-w-[860px]">
+            <DataTable className="min-w-[960px]">
               <thead>
                 <tr>
                   <DataTableHeaderCell>Tool</DataTableHeaderCell>
@@ -68,17 +109,37 @@ export function TrashToolsTable({ tools, isLoading }: TrashToolsTableProps) {
                         {formatToolStatus(tool.currentStatus)}
                       </span>
                     </DataTableCell>
-                    <DataTableCell>{formatTrashTimestamp(tool.deletedAt)}</DataTableCell>
+                    <DataTableCell>
+                      <div className="space-y-1">
+                        <div>{formatTrashTimestamp(tool.deletedAt)}</div>
+                        <div className="text-xs text-muted-foreground">{formatTrashAutoDeleteLabel(tool.deletedAt)}</div>
+                      </div>
+                    </DataTableCell>
                     <DataTableCell className="text-center">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="gap-2"
-                        onClick={() => void handleRestore(tool.id, tool.name)}
-                      >
-                        <RotateCcwIcon className="h-4 w-4" />
-                        Restore
-                      </Button>
+                      <div className="flex items-center justify-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          disabled={restoringToolId === tool.id || deletingToolId === tool.id}
+                          onClick={() => void handleRestore(tool.id, tool.name)}
+                        >
+                          <RotateCcwIcon className="h-4 w-4" />
+                          {restoringToolId === tool.id ? "Restoring..." : "Restore"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="gap-2"
+                          disabled={restoringToolId === tool.id || deletingToolId === tool.id}
+                          onClick={() => setToolPendingPermanentDelete(tool)}
+                        >
+                          <Trash2Icon className="h-4 w-4" />
+                          Delete
+                        </Button>
+                      </div>
                     </DataTableCell>
                   </tr>
                 ))}
@@ -87,6 +148,24 @@ export function TrashToolsTable({ tools, isLoading }: TrashToolsTableProps) {
           </DataTableSurface>
         )}
       </CardContent>
+
+      <DestructiveConfirmDialog
+        open={Boolean(toolPendingPermanentDelete)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setToolPendingPermanentDelete(null);
+          }
+        }}
+        title="Delete this tool permanently?"
+        description={
+          toolPendingPermanentDelete
+            ? `${toolPendingPermanentDelete.name} (${toolPendingPermanentDelete.barcode}) will be removed from Trash immediately. This cannot be undone.`
+            : "This tool will be removed from Trash immediately. This cannot be undone."
+        }
+        confirmLabel="Delete permanently"
+        isPending={deletingToolId === toolPendingPermanentDelete?.id}
+        onConfirm={handlePermanentDelete}
+      />
     </Card>
   );
 }

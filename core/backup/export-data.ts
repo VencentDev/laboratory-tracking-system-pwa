@@ -4,8 +4,11 @@ import { appDb } from "@/core/db/app-db";
 import { setAppSetting } from "@/core/db/app-settings";
 import { BACKUP_SCHEMA_VERSION, type AppBackup } from "@/core/db/schema";
 import { buildCsv, buildTimestampLabel, downloadCsv } from "@/core/lib/csv";
+import { purgeExpiredTrashRecords } from "@/features/trash/lib/trash-cleanup";
 
-function toBackup() {
+async function toBackup() {
+  await purgeExpiredTrashRecords();
+
   return appDb.transaction(
     "r",
     appDb.tools,
@@ -75,6 +78,8 @@ export async function exportJsonBackup() {
 }
 
 export async function exportToolsCsv() {
+  await purgeExpiredTrashRecords();
+
   const tools = (await appDb.tools.orderBy("createdAt").reverse().toArray()).filter((tool) => !tool.deletedAt);
   const csv = buildCsv(
     ["Barcode", "Name", "Category", "Status", "Description", "Created At", "Updated At"],
@@ -93,6 +98,8 @@ export async function exportToolsCsv() {
 }
 
 export async function exportBorrowersCsv() {
+  await purgeExpiredTrashRecords();
+
   const borrowers = (await appDb.borrowers.orderBy("createdAt").reverse().toArray()).filter(
     (borrower) => !borrower.deletedAt,
   );
