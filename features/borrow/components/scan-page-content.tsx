@@ -21,18 +21,20 @@ export function ScanPageContent() {
     isOpen,
     mode,
     selectedBorrowerId,
+    borrowOutstandingReceipt,
+    returnOutstandingReceipt,
     pendingReturn,
     barcodeRef,
     isSubmitting,
     openScanner,
     closeScanner,
-    setSelectedBorrowerId,
+    handleBorrowerChange,
     handleSubmit,
     cancelPendingReturn,
     confirmPendingReturn,
   } = useScanScanner({
     autoClearOnSuccess: true,
-    autoCloseOnSuccess: true,
+    autoCloseOnSuccess: false,
   });
 
   const totalTransactions = transactions?.length ?? 0;
@@ -52,7 +54,7 @@ export function ScanPageContent() {
       <PageHeader
         eyebrow="Scanning"
         title="Borrow & Return"
-        description="Start a borrow or return flow with focused scanner input, then review the latest recorded transactions below."
+        description="Show each borrower's full currently borrowed list after each borrow scan, or confirm returns against the borrower's remaining outstanding items."
         actions={
           <div className="flex gap-2">
             <CsvTransferActions
@@ -101,10 +103,12 @@ export function ScanPageContent() {
         open={isOpen}
         onOpenChange={handleOpenChange}
         selectedBorrowerId={selectedBorrowerId}
-        onBorrowerChange={setSelectedBorrowerId}
+        onBorrowerChange={handleBorrowerChange}
         borrowers={borrowers ?? []}
         isBorrowersLoading={isBorrowersLoading}
         isSubmitting={isSubmitting}
+        borrowOutstandingReceipt={borrowOutstandingReceipt}
+        returnOutstandingReceipt={returnOutstandingReceipt}
         keepBarcodeFocused={mode === "return" && pendingReturn === null}
         barcodeRef={barcodeRef}
         onSubmit={handleSubmit}

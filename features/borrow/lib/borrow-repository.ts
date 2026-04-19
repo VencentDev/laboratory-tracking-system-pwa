@@ -1,6 +1,8 @@
 import { appDb } from "@/core/db/app-db";
-import type { ToolTransactionRecord } from "@/core/db/schema";
+import type { ToolRecord, ToolTransactionRecord } from "@/core/db/schema";
 import type {
+  BorrowerReceiptIdentity,
+  ReceiptItem,
   ReturnPreview,
   ScanError,
   ScanErrorCode,
@@ -20,6 +22,31 @@ function isBorrowedTransaction(
   transaction: ToolTransactionRecord,
 ): transaction is ToolTransactionRecord & { transactionType: "borrowed" } {
   return transaction.transactionType === "borrowed";
+}
+
+function toReceiptItem(tool: Pick<ToolRecord, "id" | "name" | "barcode" | "category">, borrowedAt: Date | null): ReceiptItem {
+  return {
+    toolId: tool.id,
+    toolName: tool.name,
+    barcode: tool.barcode,
+    category: tool.category,
+    borrowedAt,
+  };
+}
+
+function matchesBorrowerIdentity(
+  transaction: ToolTransactionRecord,
+  borrower: BorrowerReceiptIdentity,
+) {
+  if (borrower.borrowerId && transaction.borrowerId === borrower.borrowerId) {
+    return true;
+  }
+
+  if (borrower.borrowerSchoolId && transaction.borrowerSchoolId === borrower.borrowerSchoolId) {
+    return true;
+  }
+
+  return !transaction.borrowerId && !transaction.borrowerSchoolId && transaction.borrowerName === borrower.borrowerName;
 }
 
 function getMostRecentBorrowTransaction(transactions: ToolTransactionRecord[]) {
@@ -52,6 +79,41 @@ export async function listTransactions(): Promise<TransactionRecord[]> {
     transactionType: transaction.transactionType,
     recordedAt: transaction.recordedAt,
   }));
+}
+
+export async function listOutstandingBorrowedItems(
+  borrower: BorrowerReceiptIdentity,
+): Promise<ReceiptItem[]> {
+  try {
+    const outstandingTools = await appDb.tools
+      .where("currentStatus")
+      .anyOf("borrowed", "missing")
+      .toArray();
+    const receiptItems = await Promise.all(
+      outstandingTools
+        .filter((tool) => !tool.deletedAt)
+        .map(async (tool) => {
+          const lastBorrowTransaction = await getLastBorrowTransaction(tool.id);
+
+          if (!lastBorrowTransaction || !matchesBorrowerIdentity(lastBorrowTransaction, borrower)) {
+            return null;
+          }
+
+          return toReceiptItem(tool, lastBorrowTransaction.recordedAt);
+        }),
+    );
+
+    return receiptItems
+      .filter((item): item is ReceiptItem => item !== null)
+      .sort((left, right) => {
+        const leftBorrowedAt = left.borrowedAt?.getTime() ?? 0;
+        const rightBorrowedAt = right.borrowedAt?.getTime() ?? 0;
+
+        return leftBorrowedAt - rightBorrowedAt || left.toolName.localeCompare(right.toolName);
+      });
+  } catch {
+    return [];
+  }
 }
 
 export async function processScanTransaction(
@@ -103,8 +165,12 @@ export async function processScanTransaction(
 
         return {
           action: "borrowed",
+          toolId: tool.id,
           toolName: tool.name,
           barcode: tool.barcode,
+          category: tool.category,
+          borrowerId: borrower.id,
+          borrowerSchoolId: borrower.schoolId,
           borrowerName: borrower.name,
           transactionId,
           recordedAt,
@@ -145,8 +211,12 @@ export async function processScanTransaction(
 
       return {
         action: "returned",
+        toolId: tool.id,
         toolName: tool.name,
         barcode: tool.barcode,
+        category: tool.category,
+        borrowerId: lastBorrowTransaction?.borrowerId ?? null,
+        borrowerSchoolId: lastBorrowTransaction?.borrowerSchoolId ?? null,
         borrowerName,
         transactionId,
         recordedAt,
@@ -183,6 +253,8 @@ export async function previewReturnTransaction(
       toolId: tool.id,
       toolName: tool.name,
       barcode: tool.barcode,
+      borrowerId: lastBorrowTransaction?.borrowerId ?? null,
+      borrowerSchoolId: lastBorrowTransaction?.borrowerSchoolId ?? null,
       borrowerName: lastBorrowTransaction?.borrowerName ?? "Unknown borrower",
       currentStatus: tool.currentStatus,
       category: tool.category,
