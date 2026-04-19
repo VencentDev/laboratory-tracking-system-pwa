@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import type { FormEvent, RefObject } from "react";
 import { useRef } from "react";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/core/ui/dialog";
@@ -21,7 +21,7 @@ type ToolScanDialogProps = {
   isSubmitting: boolean;
   keepBarcodeFocused: boolean;
   barcodeRef: RefObject<HTMLInputElement | null>;
-  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 };
 
 const dialogMeta: Record<
@@ -35,13 +35,15 @@ const dialogMeta: Record<
 > = {
   borrow: {
     title: "Borrow Tools",
-    description: "Select a borrower first, then scan each tool barcode. Each scan records the checkout automatically.",
+    description:
+      "Select a borrower, then scan a tool barcode. Each successful borrow opens a dedicated receipt modal with the borrower's current borrowed-item table.",
     barcodeLabel: "Tool Barcode",
     barcodePlaceholder: "Scan a barcode to borrow",
   },
   return: {
     title: "Return Tools",
-    description: "Scan a tool barcode to review the item details first, then confirm the return.",
+    description:
+      "Scan a tool barcode to review it first, then confirm the return and open a receipt modal for the borrower's remaining outstanding items.",
     barcodeLabel: "Tool Barcode",
     barcodePlaceholder: "Scan a barcode to return",
   },
@@ -67,7 +69,7 @@ export function ToolScanDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{meta.title}</DialogTitle>
           <DialogDescription>{meta.description}</DialogDescription>
@@ -136,7 +138,7 @@ function BorrowerSelectionSection({
         </p>
       ) : (
         <p className="text-xs text-muted-foreground">
-          Scans will record borrows automatically.
+          Each successful scan opens the borrower&apos;s receipt modal with the updated borrowed-item table.
         </p>
       )}
     </div>
@@ -146,8 +148,8 @@ function BorrowerSelectionSection({
 function ReturnInfoBanner() {
   return (
     <div className="rounded-2xl border border-border/50 bg-muted/60 px-4 py-3 text-sm text-foreground">
-      Return scanning does not require borrower selection. After each scan, we will open a review
-      modal with the item details before the return is recorded.
+      Return scanning does not require borrower selection. Each confirmed return opens the
+      borrower&apos;s receipt modal with the remaining not-yet-returned items.
     </div>
   );
 }
@@ -191,9 +193,9 @@ function BarcodeInputSection({
               barcodeRef.current?.focus();
             }, 0);
           }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !isSubmitting && !disabled) {
-              e.preventDefault();
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !isSubmitting && !disabled) {
+              event.preventDefault();
               formRef.current?.requestSubmit();
             }
           }}

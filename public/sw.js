@@ -1,5 +1,5 @@
-const APP_SHELL_CACHE = "lab-tracking-shell-v1";
-const ASSET_CACHE = "lab-tracking-assets-v1";
+const APP_SHELL_CACHE = "lab-tracking-shell-v2";
+const ASSET_CACHE = "lab-tracking-assets-v2";
 const PRECACHE_URLS = [
   "/",
   "/item-logs",
@@ -68,7 +68,35 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (["script", "style", "image", "font", "manifest"].includes(request.destination)) {
+  if (requestUrl.pathname.startsWith("/_next/")) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const responseClone = response.clone();
+
+            caches.open(ASSET_CACHE).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
+
+          return response;
+        })
+        .catch(async () => {
+          const cachedResponse = await caches.match(request);
+
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+
+          return Response.error();
+        }),
+    );
+
+    return;
+  }
+
+  if (["image", "font", "manifest"].includes(request.destination)) {
     event.respondWith(
       caches.match(request).then(async (cachedResponse) => {
         if (cachedResponse) {
@@ -76,11 +104,14 @@ self.addEventListener("fetch", (event) => {
         }
 
         const response = await fetch(request);
-        const responseClone = response.clone();
 
-        caches.open(ASSET_CACHE).then((cache) => {
-          cache.put(request, responseClone);
-        });
+        if (response.ok) {
+          const responseClone = response.clone();
+
+          caches.open(ASSET_CACHE).then((cache) => {
+            cache.put(request, responseClone);
+          });
+        }
 
         return response;
       }),
