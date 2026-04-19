@@ -20,11 +20,10 @@ import type {
 
 type UseScanScannerOptions = {
   autoClearOnSuccess?: boolean;
-  autoCloseOnSuccess?: boolean;
 };
 
 export function useScanScanner(options: UseScanScannerOptions = {}) {
-  const { autoClearOnSuccess = true, autoCloseOnSuccess = false } = options;
+  const { autoClearOnSuccess = true } = options;
 
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<ScanMode>("borrow");
@@ -77,7 +76,12 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
     return () => window.clearTimeout(timeoutId);
   }, [scanResult]);
 
-  const openScanner = useCallback((scannerMode: ScanMode) => {
+  const openScanner = useCallback((
+    scannerMode: ScanMode,
+    options?: {
+      borrowerId?: string;
+    },
+  ) => {
     setMode(scannerMode);
     setScanResult(null);
     setLastScannedBarcode(null);
@@ -88,6 +92,8 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
 
     if (scannerMode === "return") {
       setSelectedBorrowerId("");
+    } else if (options?.borrowerId) {
+      setSelectedBorrowerId(options.borrowerId);
     }
 
     setIsOpen(true);
@@ -119,7 +125,6 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
       setSelectedBorrowerId(value);
 
       if (mode === "borrow") {
-        setBorrowOutstandingReceipt(null);
         setLastScannedBarcode(null);
         clearBarcodeInput();
       }
@@ -180,42 +185,44 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
     [createReceiptItemFromPreview, loadOutstandingBorrowedItems],
   );
 
-  const handleScanSuccess = useCallback(
-    (result: ScanResult, currentMode: ScanMode) => {
-      const successMessage =
-        currentMode === "borrow"
-          ? `${result.toolName} checked out to ${result.borrowerName}`
-          : `${result.toolName} returned successfully`;
+  const handleBorrowSuccess = useCallback(
+    async (result: ScanResult) => {
+      const successMessage = `${result.toolName} checked out to ${result.borrowerName}`;
 
       toast.success(successMessage, {
-        description:
-          currentMode === "borrow"
-            ? `Barcode: ${result.barcode}`
-            : `Previously with ${result.borrowerName}`,
+        description: `Barcode: ${result.barcode}`,
         duration: 5000,
       });
 
       setLastScannedBarcode(result.barcode);
 
-      if (currentMode === "borrow") {
-        void refreshBorrowOutstandingReceipt(result);
+      if (autoClearOnSuccess) {
+        clearBarcodeInput();
       }
+
+      setIsOpen(false);
+      await refreshBorrowOutstandingReceipt(result);
+    },
+    [autoClearOnSuccess, clearBarcodeInput, refreshBorrowOutstandingReceipt],
+  );
+
+  const handleReturnSuccess = useCallback(
+    async (preview: ReturnPreview, result: ScanResult) => {
+      toast.success(`${result.toolName} returned successfully`, {
+        description: `Previously with ${result.borrowerName}`,
+        duration: 5000,
+      });
+
+      setLastScannedBarcode(result.barcode);
 
       if (autoClearOnSuccess) {
         clearBarcodeInput();
       }
 
-      if (autoCloseOnSuccess && currentMode === "borrow") {
-        closeScanner();
-      }
+      setIsOpen(false);
+      await refreshReturnOutstandingReceipt(preview, result);
     },
-    [
-      autoClearOnSuccess,
-      autoCloseOnSuccess,
-      clearBarcodeInput,
-      closeScanner,
-      refreshBorrowOutstandingReceipt,
-    ],
+    [autoClearOnSuccess, clearBarcodeInput, refreshReturnOutstandingReceipt],
   );
 
   const handleScanError = useCallback(
@@ -288,8 +295,7 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
       }
 
       setPendingReturn(null);
-      handleScanSuccess(result, "return");
-      await refreshReturnOutstandingReceipt(returnPreview, result);
+      await handleReturnSuccess(returnPreview, result);
     } catch {
       toast.error("Return failed", {
         description: "Could not write the return transaction to local storage. Try again.",
@@ -302,11 +308,10 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
       });
     }
   }, [
+    handleReturnSuccess,
     handleScanError,
-    handleScanSuccess,
     pendingReturn,
     processScan,
-    refreshReturnOutstandingReceipt,
   ]);
 
   const handleSubmit = useCallback(
@@ -370,7 +375,7 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
           return;
         }
 
-        handleScanSuccess(result, mode);
+        await handleBorrowSuccess(result);
       } catch {
         toast.error("Borrow failed", {
           description: "Could not record the transaction in local storage. Try again.",
@@ -385,9 +390,9 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
     },
     [
       clearBarcodeInput,
+      handleBorrowSuccess,
       handleReturnPreview,
       handleScanError,
-      handleScanSuccess,
       isPreviewLoading,
       lastScannedBarcode,
       mode,
@@ -409,6 +414,18 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
     isSubmitting: processScan.isPending || isPreviewLoading,
     openScanner,
     closeScanner,
+    closeBorrowReceipt: () => setBorrowOutstandingReceipt(null),
+    closeReturnReceipt: () => setReturnOutstandingReceipt(null),
+    continueBorrowFromReceipt: () => {
+      if (!borrowOutstandingReceipt) {
+        return;
+      }
+
+      openScanner("borrow", { borrowerId: borrowOutstandingReceipt.borrowerId });
+    },
+    continueReturnFromReceipt: () => {
+      openScanner("return");
+    },
     handleBorrowerChange,
     handleSubmit,
     cancelPendingReturn,
