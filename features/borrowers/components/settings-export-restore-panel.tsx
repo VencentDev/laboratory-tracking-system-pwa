@@ -7,10 +7,14 @@ import { SettingsActionTile } from "@/features/borrowers/components/settings-act
 type SettingsExportRestorePanelProps = {
   importInputRef: RefObject<HTMLInputElement | null>;
   isBackupPending: boolean;
+  isItemsExportPending: boolean;
+  isBorrowersExportPending: boolean;
+  isTransactionsExportPending: boolean;
   isImportPending: boolean;
-  onExportBackup: () => void | Promise<void>;
-  onExportBorrowersCsv: () => void | Promise<void>;
-  onExportTransactionsCsv: () => void | Promise<void>;
+  onRequestExportBackup: () => void;
+  onRequestExportItemsCsv: () => void;
+  onRequestExportBorrowersCsv: () => void;
+  onRequestExportTransactionsCsv: () => void;
   onImportChange: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
   onImportTrigger: () => void;
 };
@@ -18,10 +22,14 @@ type SettingsExportRestorePanelProps = {
 export function SettingsExportRestorePanel({
   importInputRef,
   isBackupPending,
+  isItemsExportPending,
+  isBorrowersExportPending,
+  isTransactionsExportPending,
   isImportPending,
-  onExportBackup,
-  onExportBorrowersCsv,
-  onExportTransactionsCsv,
+  onRequestExportBackup,
+  onRequestExportItemsCsv,
+  onRequestExportBorrowersCsv,
+  onRequestExportTransactionsCsv,
   onImportChange,
   onImportTrigger,
 }: SettingsExportRestorePanelProps) {
@@ -42,19 +50,7 @@ export function SettingsExportRestorePanel({
           description="Full database snapshot"
           variant="primary"
           disabled={isBackupPending}
-          onClick={() => void onExportBackup()}
-        />
-        <SettingsActionTile
-          icon={<DownloadIcon className="h-4 w-4" />}
-          title="Export borrowers CSV"
-          description="Report-friendly"
-          onClick={() => void onExportBorrowersCsv()}
-        />
-        <SettingsActionTile
-          icon={<DownloadIcon className="h-4 w-4" />}
-          title="Export transactions CSV"
-          description="Report-friendly"
-          onClick={() => void onExportTransactionsCsv()}
+          onClick={onRequestExportBackup}
         />
         <SettingsActionTile
           icon={<HardDriveDownloadIcon className="h-4 w-4" />}
@@ -62,6 +58,27 @@ export function SettingsExportRestorePanel({
           description="Restore from file"
           disabled={isImportPending}
           onClick={onImportTrigger}
+        />
+        <SettingsActionTile
+          icon={<DownloadIcon className="h-4 w-4" />}
+          title={isItemsExportPending ? "Exporting items CSV..." : "Export items CSV"}
+          description="Inventory report"
+          disabled={isItemsExportPending}
+          onClick={onRequestExportItemsCsv}
+        />
+        <SettingsActionTile
+          icon={<DownloadIcon className="h-4 w-4" />}
+          title={isBorrowersExportPending ? "Exporting borrowers CSV..." : "Export borrowers CSV"}
+          description="Report-friendly"
+          disabled={isBorrowersExportPending}
+          onClick={onRequestExportBorrowersCsv}
+        />
+        <SettingsActionTile
+          icon={<DownloadIcon className="h-4 w-4" />}
+          title={isTransactionsExportPending ? "Exporting transactions CSV..." : "Export transactions CSV"}
+          description="Report-friendly"
+          disabled={isTransactionsExportPending}
+          onClick={onRequestExportTransactionsCsv}
         />
       </div>
     </>

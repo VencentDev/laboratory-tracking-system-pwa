@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { DatabaseBackupIcon, DownloadIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { buildDevSeedBackup } from "@/core/backup/dev-seed";
 import {
   exportBorrowersCsv,
   exportJsonBackup,
+  exportToolsCsv,
   exportTransactionsCsv,
 } from "@/core/backup/export-data";
 import { clearAllLocalData, parseBackupFile, restoreBackup } from "@/core/backup/import-data";
@@ -15,6 +17,7 @@ import { DestructiveConfirmDialog } from "@/core/components/destructive-confirm-
 import { getAppSetting } from "@/core/db/app-settings";
 import { useInstallPrompt } from "@/core/pwa/use-install-prompt";
 import { PageHeader } from "@/core/ui/page-header";
+import { SettingsActionConfirmDialog } from "@/features/borrowers/components/settings-action-confirm-dialog";
 import { SettingsBackupHealthPanel } from "@/features/borrowers/components/settings-backup-health-panel";
 import { SettingsExportRestorePanel } from "@/features/borrowers/components/settings-export-restore-panel";
 import { SettingsInstallStatusPanel } from "@/features/borrowers/components/settings-install-status-panel";
@@ -22,10 +25,15 @@ import { SettingsLocalDataControlsPanel } from "@/features/borrowers/components/
 import { SettingsSection } from "@/features/borrowers/components/settings-section";
 import { formatSettingsTimestamp } from "@/features/borrowers/lib/settings-format";
 
+type SettingsConfirmAction = "backup" | "itemsCsv" | "borrowersCsv" | "transactionsCsv" | "seed" | null;
+
 export function SettingsPageContent() {
   const importInputRef = useRef<HTMLInputElement>(null);
-  const [isWorking, setIsWorking] = useState<null | "backup" | "import" | "clear" | "seed" | "install">(null);
+  const [isWorking, setIsWorking] = useState<
+    null | "backup" | "itemsCsv" | "borrowersCsv" | "transactionsCsv" | "import" | "clear" | "seed" | "install"
+  >(null);
   const [isClearDataDialogOpen, setIsClearDataDialogOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<SettingsConfirmAction>(null);
   const [isOnline, setIsOnline] = useState(true);
   const lastBackup = useLiveQuery(() => getAppSetting("lastBackupAt"), []);
   const lastRestore = useLiveQuery(() => getAppSetting("lastRestoreAt"), []);
@@ -61,6 +69,45 @@ export function SettingsPageContent() {
     }
   }
 
+  async function handleExportItemsCsv() {
+    setIsWorking("itemsCsv");
+
+    try {
+      await exportToolsCsv();
+      toast.success("Items CSV exported.");
+    } catch {
+      toast.error("Items CSV export failed. Try again in this browser.");
+    } finally {
+      setIsWorking(null);
+    }
+  }
+
+  async function handleExportBorrowersCsv() {
+    setIsWorking("borrowersCsv");
+
+    try {
+      await exportBorrowersCsv();
+      toast.success("Borrowers CSV exported.");
+    } catch {
+      toast.error("Borrowers CSV export failed. Try again in this browser.");
+    } finally {
+      setIsWorking(null);
+    }
+  }
+
+  async function handleExportTransactionsCsv() {
+    setIsWorking("transactionsCsv");
+
+    try {
+      await exportTransactionsCsv();
+      toast.success("Transactions CSV exported.");
+    } catch {
+      toast.error("Transactions CSV export failed. Try again in this browser.");
+    } finally {
+      setIsWorking(null);
+    }
+  }
+
   async function handleImportChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
@@ -85,14 +132,6 @@ export function SettingsPageContent() {
   }
 
   async function handleLoadSeedData() {
-    const confirmed = window.confirm(
-      "Replace the current local data with sample records for testing? Export a backup first if you need the current data.",
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
     setIsWorking("seed");
 
     try {
@@ -118,6 +157,84 @@ export function SettingsPageContent() {
       setIsWorking(null);
     }
   }
+
+  async function handleConfirmAction() {
+    const action = confirmAction;
+
+    if (!action) {
+      return;
+    }
+
+    try {
+      if (action === "backup") {
+        await handleExportBackup();
+        return;
+      }
+
+      if (action === "itemsCsv") {
+        await handleExportItemsCsv();
+        return;
+      }
+
+      if (action === "borrowersCsv") {
+        await handleExportBorrowersCsv();
+        return;
+      }
+
+      if (action === "transactionsCsv") {
+        await handleExportTransactionsCsv();
+        return;
+      }
+
+      await handleLoadSeedData();
+    } finally {
+      setConfirmAction(null);
+    }
+  }
+
+  const confirmDialogContent =
+    confirmAction === "backup"
+      ? {
+          title: "Export JSON backup?",
+          description: "This downloads a full JSON snapshot of the local database stored in this browser.",
+          confirmLabel: "Export backup",
+          pendingLabel: "Exporting...",
+          icon: <DownloadIcon className="size-6" />,
+        }
+      : confirmAction === "itemsCsv"
+        ? {
+            title: "Export items CSV?",
+            description: "This downloads a report-friendly CSV of the current inventory items on this device.",
+            confirmLabel: "Export items CSV",
+            pendingLabel: "Exporting...",
+            icon: <DownloadIcon className="size-6" />,
+          }
+        : confirmAction === "borrowersCsv"
+          ? {
+              title: "Export borrowers CSV?",
+              description: "This downloads a report-friendly CSV of registered borrowers from this browser.",
+              confirmLabel: "Export borrowers CSV",
+              pendingLabel: "Exporting...",
+              icon: <DownloadIcon className="size-6" />,
+            }
+          : confirmAction === "transactionsCsv"
+            ? {
+                title: "Export transactions CSV?",
+                description: "This downloads a report-friendly CSV of the recorded transaction history on this device.",
+                confirmLabel: "Export transactions CSV",
+                pendingLabel: "Exporting...",
+                icon: <DownloadIcon className="size-6" />,
+              }
+            : confirmAction === "seed"
+              ? {
+                  title: "Load sample data?",
+                  description:
+                    "This replaces the current local data with sample records for testing. Export a backup first if you need the current data.",
+                  confirmLabel: "Load sample data",
+                  pendingLabel: "Loading...",
+                  icon: <DatabaseBackupIcon className="size-6" />,
+                }
+              : null;
 
   async function handleInstall() {
     setIsWorking("install");
@@ -179,10 +296,14 @@ export function SettingsPageContent() {
           <SettingsExportRestorePanel
             importInputRef={importInputRef}
             isBackupPending={isWorking === "backup"}
+            isItemsExportPending={isWorking === "itemsCsv"}
+            isBorrowersExportPending={isWorking === "borrowersCsv"}
+            isTransactionsExportPending={isWorking === "transactionsCsv"}
             isImportPending={isWorking === "import"}
-            onExportBackup={handleExportBackup}
-            onExportBorrowersCsv={exportBorrowersCsv}
-            onExportTransactionsCsv={exportTransactionsCsv}
+            onRequestExportBackup={() => setConfirmAction("backup")}
+            onRequestExportItemsCsv={() => setConfirmAction("itemsCsv")}
+            onRequestExportBorrowersCsv={() => setConfirmAction("borrowersCsv")}
+            onRequestExportTransactionsCsv={() => setConfirmAction("transactionsCsv")}
             onImportChange={handleImportChange}
             onImportTrigger={() => importInputRef.current?.click()}
           />
@@ -197,11 +318,29 @@ export function SettingsPageContent() {
             showSeedAction={process.env.NODE_ENV === "development"}
             isSeedPending={isWorking === "seed"}
             isClearPending={isWorking === "clear"}
-            onLoadSeedData={handleLoadSeedData}
+            onLoadSeedData={() => setConfirmAction("seed")}
             onRequestClearData={() => setIsClearDataDialogOpen(true)}
           />
         </SettingsSection>
       </div>
+
+      {confirmDialogContent ? (
+        <SettingsActionConfirmDialog
+          open={confirmAction !== null}
+          onOpenChange={(open) => {
+            if (!open) {
+              setConfirmAction(null);
+            }
+          }}
+          title={confirmDialogContent.title}
+          description={confirmDialogContent.description}
+          confirmLabel={confirmDialogContent.confirmLabel}
+          pendingLabel={confirmDialogContent.pendingLabel}
+          isPending={confirmAction === isWorking}
+          icon={confirmDialogContent.icon}
+          onConfirm={handleConfirmAction}
+        />
+      ) : null}
 
       <DestructiveConfirmDialog
         open={isClearDataDialogOpen}
