@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, type PointerEvent } from "react";
+import { createPortal } from "react-dom";
 import Barcode from "react-barcode";
 import { RotateCcwIcon, PrinterIcon } from "lucide-react";
 
@@ -168,154 +169,161 @@ export function BarcodePrintView({ tools }: BarcodePrintViewProps) {
   }
 
   return (
-    <div className="batch-barcode-editor-root space-y-5">
-      <div className="batch-barcode-editor-toolbar flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold tracking-tight">Barcode Print Canvas</h2>
-          <p className="text-sm text-muted-foreground">
-            Move and resize selected barcode labels before printing.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button type="button" variant="outline" className="justify-between rounded-xl sm:min-w-36">
-                {paperSize.label}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuRadioGroup
-                value={paperSizeKey}
-                onValueChange={(value) => updatePaperSize(value as PaperSizeKey)}
-              >
-                {Object.entries(PAPER_SIZES).map(([key, size]) => (
-                  <DropdownMenuRadioItem key={key} value={key}>
-                    {size.label} ({Math.round(size.width)} x {Math.round(size.height)} mm)
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button type="button" variant="outline" onClick={() => resetLayout()}>
-            <RotateCcwIcon />
-            Reset
-          </Button>
-          <Button type="button" disabled={items.length === 0} onClick={() => window.print()}>
-            <PrinterIcon />
-            Print
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_260px]">
-        <div className="overflow-auto rounded-[calc(var(--radius-xl)+2px)] border border-border/70 bg-muted/30 p-4">
-          <div
-            ref={canvasRef}
-            className="barcode-print-paper relative mx-auto overflow-hidden bg-white text-black shadow-soft"
-            style={{
-              width: `${paperSize.width}mm`,
-              height: `${paperSize.height}mm`,
-            }}
-          >
-            {items.map((item) => {
-              const isSelected = selectedItemId === item.id;
-
-              return (
-                <div
-                  key={item.id}
-                  className={`barcode-print-item absolute select-none bg-white ${
-                    isSelected ? "ring-2 ring-primary" : "ring-1 ring-black/10"
-                  }`}
-                  style={{
-                    left: `${item.x}mm`,
-                    top: `${item.y}mm`,
-                    width: `${item.width}mm`,
-                    height: `${item.height}mm`,
-                  }}
-                  onPointerDown={(event) => handlePointerDown(event, item, "move")}
-                  onPointerMove={handlePointerMove}
-                  onPointerUp={handlePointerUp}
-                  onPointerCancel={handlePointerUp}
+    <>
+      <div className="batch-barcode-editor-root space-y-5">
+        <div className="batch-barcode-editor-toolbar flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">Barcode Print Canvas</h2>
+            <p className="text-sm text-muted-foreground">
+              Move and resize selected barcode labels before printing.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" className="justify-between rounded-xl sm:min-w-36">
+                  {paperSize.label}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuRadioGroup
+                  value={paperSizeKey}
+                  onValueChange={(value) => updatePaperSize(value as PaperSizeKey)}
                 >
-                  <BarcodeLabel item={item} />
+                  {Object.entries(PAPER_SIZES).map(([key, size]) => (
+                    <DropdownMenuRadioItem key={key} value={key}>
+                      {size.label} ({Math.round(size.width)} x {Math.round(size.height)} mm)
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button type="button" variant="outline" onClick={() => resetLayout()}>
+              <RotateCcwIcon />
+              Reset
+            </Button>
+            <Button type="button" disabled={items.length === 0} onClick={() => window.print()}>
+              <PrinterIcon />
+              Print
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_260px]">
+          <div className="overflow-auto rounded-[calc(var(--radius-xl)+2px)] border border-border/70 bg-muted/30 p-4">
+            <div
+              ref={canvasRef}
+              className="barcode-print-paper relative mx-auto overflow-hidden bg-white text-black shadow-soft"
+              style={{
+                width: `${paperSize.width}mm`,
+                height: `${paperSize.height}mm`,
+              }}
+            >
+              {items.map((item) => {
+                const isSelected = selectedItemId === item.id;
+
+                return (
                   <div
-                    className="barcode-resize-handle absolute bottom-0 right-0 size-4 cursor-nwse-resize rounded-tl-md bg-primary print:hidden"
-                    onPointerDown={(event) => {
-                      event.stopPropagation();
-                      handlePointerDown(event, item, "resize");
+                    key={item.id}
+                    className={`barcode-print-item absolute select-none bg-white ${
+                      isSelected ? "ring-2 ring-primary" : "ring-1 ring-black/10"
+                    }`}
+                    style={{
+                      left: `${item.x}mm`,
+                      top: `${item.y}mm`,
+                      width: `${item.width}mm`,
+                      height: `${item.height}mm`,
                     }}
+                    onPointerDown={(event) => handlePointerDown(event, item, "move")}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
                     onPointerCancel={handlePointerUp}
-                    aria-hidden="true"
+                  >
+                    <BarcodeLabel item={item} />
+                    <div
+                      className="barcode-resize-handle absolute bottom-0 right-0 size-4 cursor-nwse-resize rounded-tl-md bg-primary print:hidden"
+                      onPointerDown={(event) => {
+                        event.stopPropagation();
+                        handlePointerDown(event, item, "resize");
+                      }}
+                      onPointerMove={handlePointerMove}
+                      onPointerUp={handlePointerUp}
+                      onPointerCancel={handlePointerUp}
+                      aria-hidden="true"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="batch-barcode-editor-controls space-y-4 rounded-[calc(var(--radius-xl)+2px)] border border-border/70 bg-card/80 p-4 shadow-soft">
+            <div>
+              <h3 className="text-sm font-semibold tracking-tight">Selected Label</h3>
+              <p className="text-xs text-muted-foreground">
+                Drag on the canvas or enter exact measurements in millimeters.
+              </p>
+            </div>
+
+            {selectedItem ? (
+              <div className="space-y-3">
+                <div className="rounded-xl border border-border/70 bg-muted/30 p-3">
+                  <div className="truncate text-sm font-medium">{selectedItem.toolName}</div>
+                  <div className="truncate font-mono text-xs text-muted-foreground">{selectedItem.barcode}</div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <MeasurementInput label="X" value={selectedItem.x} onChange={(value) => updateSelectedItem("x", value)} />
+                  <MeasurementInput label="Y" value={selectedItem.y} onChange={(value) => updateSelectedItem("y", value)} />
+                  <MeasurementInput
+                    label="Width"
+                    value={selectedItem.width}
+                    onChange={(value) => updateSelectedItem("width", value)}
+                  />
+                  <MeasurementInput
+                    label="Height"
+                    value={selectedItem.height}
+                    onChange={(value) => updateSelectedItem("height", value)}
                   />
                 </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="batch-barcode-editor-controls space-y-4 rounded-[calc(var(--radius-xl)+2px)] border border-border/70 bg-card/80 p-4 shadow-soft">
-          <div>
-            <h3 className="text-sm font-semibold tracking-tight">Selected Label</h3>
-            <p className="text-xs text-muted-foreground">
-              Drag on the canvas or enter exact measurements in millimeters.
-            </p>
-          </div>
-
-          {selectedItem ? (
-            <div className="space-y-3">
-              <div className="rounded-xl border border-border/70 bg-muted/30 p-3">
-                <div className="truncate text-sm font-medium">{selectedItem.toolName}</div>
-                <div className="truncate font-mono text-xs text-muted-foreground">{selectedItem.barcode}</div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <MeasurementInput label="X" value={selectedItem.x} onChange={(value) => updateSelectedItem("x", value)} />
-                <MeasurementInput label="Y" value={selectedItem.y} onChange={(value) => updateSelectedItem("y", value)} />
-                <MeasurementInput
-                  label="Width"
-                  value={selectedItem.width}
-                  onChange={(value) => updateSelectedItem("width", value)}
-                />
-                <MeasurementInput
-                  label="Height"
-                  value={selectedItem.height}
-                  onChange={(value) => updateSelectedItem("height", value)}
-                />
+            ) : (
+              <div className="rounded-xl border border-dashed border-border/80 p-4 text-sm text-muted-foreground">
+                Select a barcode label on the canvas.
               </div>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-border/80 p-4 text-sm text-muted-foreground">
-              Select a barcode label on the canvas.
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="barcode-print-output" aria-hidden="true">
-        <div
-          className="barcode-print-output-paper"
-          style={{
-            width: `${paperSize.width}mm`,
-            height: `${paperSize.height}mm`,
-          }}
-        >
-          {items.map((item) => (
-            <div
-              key={`print-${item.id}`}
-              className="barcode-print-output-item"
-              style={{
-                left: `${item.x}mm`,
-                top: `${item.y}mm`,
-                width: `${item.width}mm`,
-                height: `${item.height}mm`,
-              }}
-            >
-              <BarcodeLabel item={item} />
-            </div>
-          ))}
-        </div>
-      </div>
+      {typeof document !== "undefined"
+        ? createPortal(
+            <div className="barcode-print-output" aria-hidden="true">
+              <div
+                className="barcode-print-output-paper"
+                style={{
+                  width: `${paperSize.width}mm`,
+                  height: `${paperSize.height}mm`,
+                }}
+              >
+                {items.map((item) => (
+                  <div
+                    key={`print-${item.id}`}
+                    className="barcode-print-output-item"
+                    style={{
+                      left: `${item.x}mm`,
+                      top: `${item.y}mm`,
+                      width: `${item.width}mm`,
+                      height: `${item.height}mm`,
+                    }}
+                  >
+                    <BarcodeLabel item={item} />
+                  </div>
+                ))}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
 
       <style jsx global>{`
         .barcode-print-item {
@@ -346,13 +354,8 @@ export function BarcodePrintView({ tools }: BarcodePrintViewProps) {
             background: white !important;
           }
 
-          body * {
-            visibility: hidden;
-          }
-
-          .barcode-print-output,
-          .barcode-print-output * {
-            visibility: visible !important;
+          body > :not(.barcode-print-output) {
+            display: none !important;
           }
 
           .barcode-print-output {
@@ -390,7 +393,7 @@ export function BarcodePrintView({ tools }: BarcodePrintViewProps) {
           }
         }
       `}</style>
-    </div>
+    </>
   );
 }
 
