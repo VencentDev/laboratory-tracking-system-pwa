@@ -2,8 +2,6 @@
 
 import * as React from "react";
 import type { Route } from "next";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 import { NavMain } from "@/components/nav-main";
 import {
@@ -12,29 +10,18 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  ChevronRightIcon,
   LayoutDashboardIcon,
-  LogOutIcon,
   PackagePlusIcon,
-  QrCodeIcon,
   Settings2Icon,
   SquareUserRoundIcon,
   Trash2Icon,
   WrenchIcon,
 } from "lucide-react";
+import { LogoutConfirmButton } from "@/features/auth/components/logout-confirm-button";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 
 type SidebarNavItem = {
@@ -48,79 +35,76 @@ type SidebarNavItem = {
   }[];
 };
 
-const data = {
-  navMain: [
+const adminNavItems = [
+  {
+    title: "Dashboard",
+    url: "/admin" as Route,
+    icon: <LayoutDashboardIcon />,
+  },
+  {
+    title: "Inventory",
+    icon: <PackagePlusIcon />,
+    isActive: true,
+    items: [
+      {
+        title: "Manage Items",
+        url: "/add-items" as Route,
+      },
+      {
+        title: "Item Activity",
+        url: "/item-logs" as Route,
+      },
+    ],
+  },
+  {
+    title: "Borrowers",
+    icon: <SquareUserRoundIcon />,
+    isActive: true,
+    items: [
+      {
+        title: "Manage Borrowers",
+        url: "/register-borrower" as Route,
+      },
+      {
+        title: "Borrower Activity",
+        url: "/borrower-logs" as Route,
+      },
+    ],
+  },
+  {
+    title: "Settings",
+    icon: <Settings2Icon />,
+    isActive: true,
+    items: [
+      {
+        title: "Settings",
+        url: "/settings" as Route,
+      },
+      {
+        title: "Safety",
+        url: "/trash" as Route,
+      },
+    ],
+  },
+  {
+    title: "Trash",
+    url: "/trash" as Route,
+    icon: <Trash2Icon />,
+  },
+] satisfies SidebarNavItem[];
+
+const fallbackNavItems = [
     {
       title: "Borrow & Return",
       url: "/scan" as Route,
-      icon: <QrCodeIcon />,
+      icon: <LayoutDashboardIcon />,
     },
-    {
-      title: "Inventory",
-      icon: <PackagePlusIcon />,
-      isActive: true,
-      items: [
-        {
-          title: "Manage Items",
-          url: "/add-items" as Route,
-        },
-        {
-          title: "Item Activity",
-          url: "/item-logs" as Route,
-        },
-        
-      ],
-    },
-    
-    {
-      title: "Borrowers",
-      icon: <SquareUserRoundIcon />,
-      isActive: true,
-      items: [
-        {
-          title: "Manage Borrowers",
-          url: "/register-borrower" as Route,
-        },
-        {
-          title: "Borrower Activity",
-          url: "/borrower-logs" as Route,
-        },
-      ],
-    },
-  ] satisfies SidebarNavItem[],
-};
+] satisfies SidebarNavItem[];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const pathname = usePathname();
-  const { logout, session } = useAuth();
-  const [hasMounted, setHasMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-  const isSettingsActive =
-    hasMounted &&
-    (pathname === "/settings" ||
-      pathname.startsWith("/settings/") ||
-      pathname === "/trash" ||
-      pathname.startsWith("/trash/"));
+  const { session } = useAuth();
   const navItems = React.useMemo(
-    () =>
-      session?.role === "admin"
-        ? [
-            {
-              title: "Dashboard",
-              url: "/admin" as Route,
-              icon: <LayoutDashboardIcon />,
-            },
-            {
-              title: "Settings",
-              url: "/admin/settings" as Route,
-              icon: <Settings2Icon />,
-            },
-          ]
-        : data.navMain,
+    () => (session?.role === "admin" ? adminNavItems : fallbackNavItems),
     [session?.role],
   );
 
@@ -148,40 +132,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border/70 px-3 py-3">
         <SidebarMenu>
-          {session?.role !== "admin" ? (
-            <SidebarMenuItem>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton tooltip="Settings" isActive={isSettingsActive}>
-                    <Settings2Icon />
-                    <span>Settings</span>
-                    <ChevronRightIcon className="ml-auto group-data-[collapsible=icon]:hidden" />
-                  </SidebarMenuButton>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent side="right" align="end" className="group-data-[collapsible=icon]:min-w-[12rem]">
-                  <DropdownMenuLabel>Workspace</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild className={pathname === "/settings" ? "bg-accent text-accent-foreground" : undefined}>
-                    <Link href={"/settings" as Route}>
-                      <Settings2Icon />
-                      <span>Settings</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className={pathname === "/trash" ? "bg-accent text-accent-foreground" : undefined}>
-                    <Link href={"/trash" as Route}>
-                      <Trash2Icon />
-                      <span>Trash</span>
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </SidebarMenuItem>
-          ) : null}
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Logout" onClick={() => void logout()}>
-              <LogOutIcon />
-              <span>Logout</span>
-            </SidebarMenuButton>
+            <LogoutConfirmButton mode="sidebar" />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
