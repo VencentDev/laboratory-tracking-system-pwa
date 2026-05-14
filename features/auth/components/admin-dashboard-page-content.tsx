@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import type { Route } from "next";
 import Link from "next/link";
-import { ChevronRightIcon, SearchIcon, XIcon } from "lucide-react";
+import { EyeIcon, SearchIcon, XIcon } from "lucide-react";
 
 import { appDb } from "@/core/db/app-db";
 import type { DateRangeValue } from "@/core/lib/date-range";
@@ -125,19 +125,15 @@ export function AdminDashboardPageContent() {
               <DataTableHeaderCell>Section</DataTableHeaderCell>
               <DataTableHeaderCell>Login</DataTableHeaderCell>
               <DataTableHeaderCell>Logout</DataTableHeaderCell>
-              <DataTableHeaderCell>Items Borrowed</DataTableHeaderCell>
+              <DataTableHeaderCell>Transactions</DataTableHeaderCell>
+              <DataTableHeaderCell>Actions</DataTableHeaderCell>
             </tr>
           </thead>
           <tbody>
             {filteredSessions.map((session) => (
               <tr key={session.id}>
                 <DataTableCell className="font-medium text-foreground">
-                  <Button asChild variant="ghost" size="sm" className="-ml-2 justify-start">
-                    <Link href={`/admin/sessions/${session.id}` as Route}>
-                      {session.name}
-                      <ChevronRightIcon />
-                    </Link>
-                  </Button>
+                  {session.name}
                 </DataTableCell>
                 <DataTableCell>{session.studentId}</DataTableCell>
                 <DataTableCell>{session.yearLevel}</DataTableCell>
@@ -145,6 +141,13 @@ export function AdminDashboardPageContent() {
                 <DataTableCell>{formatRecordedAt(session.loginAt)}</DataTableCell>
                 <DataTableCell>{session.logoutAt ? formatRecordedAt(session.logoutAt) : "Active"}</DataTableCell>
                 <DataTableCell>{borrowedCountsBySessionId.get(session.id) ?? 0}</DataTableCell>
+                <DataTableCell>
+                  <Button asChild variant="ghost" size="icon" aria-label={`View ${session.name} transactions`}>
+                    <Link href={`/admin/sessions/${session.id}` as Route}>
+                      <EyeIcon />
+                    </Link>
+                  </Button>
+                </DataTableCell>
               </tr>
             ))}
           </tbody>
