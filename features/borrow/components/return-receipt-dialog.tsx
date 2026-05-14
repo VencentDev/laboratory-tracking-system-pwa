@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef } from "react";
+
 import { Button } from "@/core/ui/button";
 import {
   Dialog,
@@ -25,11 +27,18 @@ export function ReturnReceiptDialog({
   onContinue,
 }: ReturnReceiptDialogProps) {
   const open = receipt !== null;
+  const doneButtonRef = useRef<HTMLButtonElement>(null);
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? onClose() : undefined)}>
       {receipt ? (
-        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+        <DialogContent
+          className="max-h-[85vh] max-w-3xl overflow-y-auto"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            doneButtonRef.current?.focus();
+          }}
+        >
           <DialogHeader className="space-y-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-1">
@@ -107,11 +116,11 @@ export function ReturnReceiptDialog({
           </section>
 
           <DialogFooter className="flex-col-reverse sm:flex-row">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Done
-            </Button>
             <Button type="button" onClick={onContinue}>
               Return Another Tool
+            </Button>
+            <Button ref={doneButtonRef} type="button" variant="outline" onClick={onClose}>
+              Done
             </Button>
           </DialogFooter>
         </DialogContent>
