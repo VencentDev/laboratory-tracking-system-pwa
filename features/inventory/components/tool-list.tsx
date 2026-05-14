@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { PencilIcon, SearchIcon, Trash2Icon, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -109,21 +108,6 @@ export function ToolList({ onEdit }: ToolListProps) {
       window.clearTimeout(timeoutId);
     };
   }, [previewTool, shouldPrintPreview]);
-
-  useEffect(() => {
-    if (!batchPrintTools.length) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      window.print();
-      setBatchPrintTools([]);
-    }, 150);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [batchPrintTools]);
 
   useEffect(() => {
     if (!selectAllCheckboxRef.current) {
@@ -455,9 +439,22 @@ export function ToolList({ onEdit }: ToolListProps) {
         </DialogContent>
       </Dialog>
 
-      {batchPrintTools.length && typeof document !== "undefined"
-        ? createPortal(<BarcodePrintView tools={batchPrintTools} />, document.body)
-        : null}
+      <Dialog
+        open={batchPrintTools.length > 0}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBatchPrintTools([]);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[92vh] max-w-6xl overflow-y-auto">
+          <DialogTitle className="sr-only">Barcode print canvas</DialogTitle>
+          <DialogDescription className="sr-only">
+            Arrange, resize, and print the selected barcodes.
+          </DialogDescription>
+          {batchPrintTools.length ? <BarcodePrintView tools={batchPrintTools} /> : null}
+        </DialogContent>
+      </Dialog>
 
       <DestructiveConfirmDialog
         open={Boolean(toolPendingDelete)}

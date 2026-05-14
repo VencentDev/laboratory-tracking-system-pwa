@@ -102,7 +102,7 @@ const fallbackNavItems = [
 ] satisfies SidebarNavItem[];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { logout, session } = useAuth();
+  const { session } = useAuth();
   const navItems = React.useMemo(
     () => (session?.role === "admin" ? adminNavItems : fallbackNavItems),
     [session?.role],
