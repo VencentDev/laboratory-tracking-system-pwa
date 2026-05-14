@@ -1,5 +1,5 @@
-import { ToolkeeperLoginPageContent } from "@/features/auth/components/toolkeeper-login-page-content";
+import { LoginPageContent } from "@/features/auth/components/login-page-content";
 
 export default function HomePage() {
-  return <ToolkeeperLoginPageContent />;
+  return <LoginPageContent />;
 }
