@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   ChevronRightIcon,
+  LayoutDashboardIcon,
+  LogOutIcon,
   PackagePlusIcon,
   QrCodeIcon,
   Settings2Icon,
@@ -33,6 +35,7 @@ import {
   Trash2Icon,
   WrenchIcon,
 } from "lucide-react";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 
 type SidebarNavItem = {
   title: string;
@@ -89,6 +92,7 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
+  const { logout, session } = useAuth();
   const [hasMounted, setHasMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -101,6 +105,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       pathname.startsWith("/settings/") ||
       pathname === "/trash" ||
       pathname.startsWith("/trash/"));
+  const navItems = React.useMemo(
+    () =>
+      session?.role === "admin"
+        ? [
+            {
+              title: "Dashboard",
+              url: "/admin" as Route,
+              icon: <LayoutDashboardIcon />,
+            },
+            {
+              title: "Settings",
+              url: "/admin/settings" as Route,
+              icon: <Settings2Icon />,
+            },
+          ]
+        : data.navMain,
+    [session?.role],
+  );
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -112,42 +134,54 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
             <span className="truncate text-sm font-semibold tracking-[-0.02em]">Laboratory Tracking</span>
             <span className="truncate text-xs text-sidebar-foreground/65">
-              Inventory and borrowing
+              {session?.role === "admin"
+                ? "Admin workspace"
+                : session?.role === "toolkeeper"
+                  ? session.name
+                  : "Inventory and borrowing"}
             </span>
           </div>
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navItems} />
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border/70 px-3 py-3">
         <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton tooltip="Settings" isActive={isSettingsActive}>
-                  <Settings2Icon />
-                  <span>Settings</span>
-                  <ChevronRightIcon className="ml-auto group-data-[collapsible=icon]:hidden" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="right" align="end" className="group-data-[collapsible=icon]:min-w-[12rem]">
-                <DropdownMenuLabel>Workspace</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild className={pathname === "/settings" ? "bg-accent text-accent-foreground" : undefined}>
-                  <Link href={"/settings" as Route}>
+          {session?.role !== "admin" ? (
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton tooltip="Settings" isActive={isSettingsActive}>
                     <Settings2Icon />
                     <span>Settings</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className={pathname === "/trash" ? "bg-accent text-accent-foreground" : undefined}>
-                  <Link href={"/trash" as Route}>
-                    <Trash2Icon />
-                    <span>Trash</span>
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    <ChevronRightIcon className="ml-auto group-data-[collapsible=icon]:hidden" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="right" align="end" className="group-data-[collapsible=icon]:min-w-[12rem]">
+                  <DropdownMenuLabel>Workspace</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild className={pathname === "/settings" ? "bg-accent text-accent-foreground" : undefined}>
+                    <Link href={"/settings" as Route}>
+                      <Settings2Icon />
+                      <span>Settings</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className={pathname === "/trash" ? "bg-accent text-accent-foreground" : undefined}>
+                    <Link href={"/trash" as Route}>
+                      <Trash2Icon />
+                      <span>Trash</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          ) : null}
+          <SidebarMenuItem>
+            <SidebarMenuButton tooltip="Logout" onClick={() => void logout()}>
+              <LogOutIcon />
+              <span>Logout</span>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

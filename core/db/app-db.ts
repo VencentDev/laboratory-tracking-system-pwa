@@ -1,8 +1,10 @@
 import Dexie, { type EntityTable, type Transaction } from "dexie";
 
 import type {
+  AdminCredentialRecord,
   AppSettingRecord,
   BorrowerRecord,
+  ToolkeeperSessionRecord,
   ToolRecord,
   ToolTransactionRecord,
 } from "@/core/db/schema";
@@ -13,6 +15,15 @@ type SchemaVersionDefinition = {
   stores: Record<string, string>;
   upgrade?: (transaction: Transaction) => Promise<void> | void;
 };
+
+async function hashPassword(password: string) {
+  const encodedPassword = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", encodedPassword);
+
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 const schemaVersions: SchemaVersionDefinition[] = [
   {
@@ -82,6 +93,26 @@ const schemaVersions: SchemaVersionDefinition[] = [
         );
     },
   },
+  {
+    version: 4,
+    stores: {
+      tools: "++id, &barcode, currentStatus, category, createdAt, updatedAt, deletedAt",
+      borrowers: "&id, &schoolId, type, createdAt, deletedAt",
+      transactions:
+        "++id, toolId, barcode, borrowerId, borrowerSchoolId, borrowerName, transactionType, recordedAt, [toolId+transactionType]",
+      appSettings: "&key, updatedAt",
+      adminCredentials: "&id, updatedAt",
+      toolkeeperSessions: "++id, studentId, loginAt, logoutAt",
+    },
+    upgrade: async (transaction) => {
+      await transaction.table("adminCredentials").put({
+        id: "admin",
+        username: "admin",
+        passwordHash: await hashPassword("admin123"),
+        updatedAt: new Date(),
+      } satisfies AdminCredentialRecord);
+    },
+  },
 ];
 
 export class AppDatabase extends Dexie {
@@ -89,6 +120,8 @@ export class AppDatabase extends Dexie {
   borrowers!: EntityTable<BorrowerRecord, "id">;
   transactions!: EntityTable<ToolTransactionRecord, "id">;
   appSettings!: EntityTable<AppSettingRecord, "key">;
+  adminCredentials!: EntityTable<AdminCredentialRecord, "id">;
+  toolkeeperSessions!: EntityTable<ToolkeeperSessionRecord, "id">;
 
   constructor() {
     super(APP_DB_NAME);
