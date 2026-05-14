@@ -97,23 +97,15 @@ export function LoginPageContent() {
           <BrandLockup />
 
           <div className="flex flex-1 items-center justify-center py-10">
-            <div className="relative flex aspect-[4/5] max-h-[60vh] w-full max-w-[430px] items-center justify-center overflow-hidden rounded-[2rem] border border-border/70 bg-background shadow-soft">
-              <div className="absolute inset-x-8 bottom-10 top-16 rounded-3xl border border-border/70 bg-muted/45" />
-              <div className="absolute left-12 right-12 top-24 grid gap-4">
-                {["bg-primary/15", "bg-emerald-500/15", "bg-amber-500/15", "bg-sky-500/15"].map((color, rowIndex) => (
-                  <div key={color} className="grid grid-cols-4 gap-3">
-                    {Array.from({ length: 4 }).map((_, columnIndex) => (
-                      <div
-                        key={`${rowIndex}-${columnIndex}`}
-                        className={`aspect-square rounded-xl border border-border/70 ${color}`}
-                      />
-                    ))}
-                  </div>
-                ))}
-              </div>
-              <div className="absolute bottom-8 right-10 flex size-24 items-center justify-center rounded-3xl border border-border bg-background shadow-soft">
-                <Image src="/icon-512.png" alt="" width={72} height={72} className="rounded-2xl" priority />
-              </div>
+            <div className="relative aspect-[4/5] max-h-[68vh] w-full max-w-[440px] overflow-hidden rounded-[2rem] border border-border/70 bg-background shadow-soft">
+              <Image
+                src="/laboratory-image.jpg"
+                alt="Organized laboratory inventory shelves with tools and boxes"
+                fill
+                priority
+                sizes="440px"
+                className="object-cover"
+              />
             </div>
           </div>
 
@@ -127,7 +119,7 @@ export function LoginPageContent() {
 
         <section className="flex items-center justify-center px-6 py-12 sm:px-10">
           <div className="w-full max-w-sm">
-            <div className="mb-8 lg:hidden">
+            <div className="mb-8">
               <BrandLockup />
             </div>
 
