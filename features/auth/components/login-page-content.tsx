@@ -2,7 +2,15 @@
 
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { BoxesIcon, GraduationCapIcon, HashIcon, LayersIcon, LockIcon, UserIcon } from "lucide-react";
+import {
+  BoxesIcon,
+  ChevronDownIcon,
+  GraduationCapIcon,
+  HashIcon,
+  LayersIcon,
+  LockIcon,
+  UserIcon,
+} from "lucide-react";
 import type { Route } from "next";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -10,6 +18,14 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "@/core/components/theme-toggle";
 import { Button } from "@/core/ui/button";
 import { Input } from "@/core/ui/input";
 import { Label } from "@/core/ui/label";
@@ -92,10 +108,12 @@ export function LoginPageContent() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <div className="absolute left-6 right-6 top-6 z-20 flex items-center justify-between sm:left-10 sm:right-10">
+        <BrandLockup />
+        <ThemeToggle />
+      </div>
       <div className="grid min-h-screen lg:grid-cols-2">
-        <aside className="relative hidden flex-col justify-between overflow-hidden border-r border-border bg-muted/30 p-10 lg:flex">
-          <BrandLockup />
-
+        <aside className="relative hidden flex-col justify-between overflow-hidden border-r border-border bg-muted/30 px-10 pb-10 pt-24 lg:flex">
           <div className="flex flex-1 items-center justify-center py-10">
             <div className="relative aspect-[4/5] max-h-[68vh] w-full max-w-[440px] overflow-hidden rounded-[2rem] border border-border/70 bg-background shadow-soft">
               <Image
@@ -119,10 +137,6 @@ export function LoginPageContent() {
 
         <section className="flex items-center justify-center px-6 py-12 sm:px-10">
           <div className="w-full max-w-sm">
-            <div className="mb-8">
-              <BrandLockup />
-            </div>
-
             <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">Sign in to continue to your dashboard.</p>
 
@@ -206,7 +220,7 @@ function Field({
       </Label>
       <div className="relative">
         <Icon className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
-        <div className="[&_input]:pl-9 [&_select]:pl-9">{children}</div>
+        <div className="[&_button]:pl-9 [&_input]:pl-9">{children}</div>
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
@@ -243,6 +257,8 @@ function AdminFields({ form }: { form: ReturnType<typeof useForm<AdminLoginInput
 }
 
 function ToolkeeperFields({ form }: { form: ReturnType<typeof useForm<ToolkeeperLoginInput>> }) {
+  const yearLevel = form.watch("yearLevel");
+
   return (
     <>
       <Field id="tk-name" label="Name" icon={UserIcon} error={form.formState.errors.name?.message}>
@@ -258,17 +274,32 @@ function ToolkeeperFields({ form }: { form: ReturnType<typeof useForm<Toolkeeper
           icon={GraduationCapIcon}
           error={form.formState.errors.yearLevel?.message}
         >
-          <select
-            id="tk-year"
-            className="h-9 w-full min-w-0 rounded-xl border border-border/80 bg-background/80 py-1 pr-3 text-base transition-[color,box-shadow,background-color,border-color] duration-200 outline-none focus-visible:border-ring focus-visible:ring-4 focus-visible:ring-ring/15 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted/30 disabled:opacity-50 md:text-sm"
-            {...form.register("yearLevel")}
-          >
-            <option value="">Year</option>
-            <option value="1st Year">1st Year</option>
-            <option value="2nd Year">2nd Year</option>
-            <option value="3rd Year">3rd Year</option>
-            <option value="4th Year">4th Year</option>
-          </select>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button id="tk-year" type="button" variant="outline" className="w-full justify-between rounded-xl">
+                <span className={yearLevel ? undefined : "text-muted-foreground"}>{yearLevel || "Year"}</span>
+                <ChevronDownIcon className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[var(--radix-dropdown-menu-trigger-width)]">
+              <DropdownMenuRadioGroup
+                value={yearLevel}
+                onValueChange={(nextValue) => {
+                  form.setValue("yearLevel", nextValue, {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                    shouldValidate: true,
+                  });
+                }}
+              >
+                {["1st Year", "2nd Year", "3rd Year", "4th Year"].map((option) => (
+                  <DropdownMenuRadioItem key={option} value={option}>
+                    {option}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </Field>
         <Field id="tk-section" label="Section" icon={LayersIcon} error={form.formState.errors.section?.message}>
           <Input id="tk-section" placeholder="A" {...form.register("section")} />
