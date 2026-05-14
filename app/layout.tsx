@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ServiceWorkerRegistration } from "@/core/pwa/register-sw";
 import { ThemeProvider } from "@/core/providers/theme-provider";
 import { SonnerToaster } from "@/core/ui/sonner";
+import { AuthProvider } from "@/features/auth/components/auth-provider";
 
 import "./globals.css";
 
@@ -43,9 +44,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
       <body className="min-h-screen bg-background text-foreground antialiased">
         <ThemeProvider>
           <TooltipProvider delayDuration={0}>
-            <ServiceWorkerRegistration />
-            {children}
-            <SonnerToaster />
+            <AuthProvider>
+              <ServiceWorkerRegistration />
+              {children}
+              <SonnerToaster />
+            </AuthProvider>
           </TooltipProvider>
         </ThemeProvider>
       </body>

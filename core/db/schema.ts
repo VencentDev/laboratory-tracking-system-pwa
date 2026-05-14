@@ -1,5 +1,5 @@
 export const APP_DB_NAME = "laboratory-tracking-system-pwa";
-export const APP_DB_VERSION = 3;
+export const APP_DB_VERSION = 4;
 export const BACKUP_SCHEMA_VERSION = 3;
 
 export type ToolStatus = "available" | "borrowed" | "missing";
@@ -50,6 +50,23 @@ export type AppSettingRecord = {
   key: string;
   value: string;
   updatedAt: Date;
+};
+
+export type AdminCredentialRecord = {
+  id: "admin";
+  username: string;
+  passwordHash: string;
+  updatedAt: Date;
+};
+
+export type ToolkeeperSessionRecord = {
+  id: number;
+  name: string;
+  studentId: string;
+  yearLevel: string;
+  section: string;
+  loginAt: Date;
+  logoutAt: Date | null;
 };
 
 export type SerializedToolRecord = Omit<ToolRecord, "createdAt" | "updatedAt" | "deletedAt"> & {
