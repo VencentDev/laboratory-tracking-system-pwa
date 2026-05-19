@@ -99,11 +99,12 @@ async function tryBridgePrint(
       }),
     });
 
-    if (!response.ok) {
-      return { ok: false, error: `Bridge returned HTTP ${response.status}` };
-    }
-
     const payload: unknown = await response.json();
+
+    if (!response.ok) {
+      const bridgeError = isBridgeError(payload) ? `: ${payload.error}` : "";
+      return { ok: false, error: `Bridge returned HTTP ${response.status}${bridgeError}` };
+    }
 
     if (isBridgeSuccess(payload)) {
       return { ok: true };
