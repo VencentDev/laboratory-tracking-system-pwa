@@ -76,7 +76,7 @@ Users can run it directly instead of installing Node.js and pnpm.
 Windows still requires the POS printer driver and the installed printer queue name:
 
 ```powershell
-$env:PRINT_BRIDGE_PRINTER_NAME="POS-5890"
+$env:PRINT_BRIDGE_PRINTER_NAME="POS-58"
 .\laboratory-print-bridge-win.exe
 ```
 
@@ -157,7 +157,7 @@ PRINT_BRIDGE_DEVICE=/dev/usb/lp1 pnpm print-bridge
 4. Start the bridge with that name:
 
 ```powershell
-$env:PRINT_BRIDGE_PRINTER_NAME="POS-5890"
+$env:PRINT_BRIDGE_PRINTER_NAME="POS-58"
 pnpm print-bridge
 ```
 
@@ -181,7 +181,7 @@ Environment variables:
 | `PRINT_BRIDGE_HOST` | `127.0.0.1` | Local bind address |
 | `PRINT_BRIDGE_TARGET` | `auto` | `auto`, `linux-device`, `windows-queue`, or `file` |
 | `PRINT_BRIDGE_DEVICE` | `/dev/usb/lp0` | Linux USB printer device |
-| `PRINT_BRIDGE_PRINTER_NAME` | empty | Windows installed printer name |
+| `PRINT_BRIDGE_PRINTER_NAME` | `POS-58` | Windows installed printer name |
 | `PRINT_BRIDGE_CUT` | `0` | Set `1` to send ESC/POS cut command |
 | `PRINT_BRIDGE_ALLOWED_ORIGINS` | `*` | Comma-separated allowed web origins |
 | `PRINT_BRIDGE_FILE` | `receipt-print.bin` | Output file path when target is `file` |

@@ -11,7 +11,7 @@ const PORT = Number.parseInt(process.env.PRINT_BRIDGE_PORT ?? "9321", 10);
 const HOST = process.env.PRINT_BRIDGE_HOST ?? "127.0.0.1";
 const TARGET = process.env.PRINT_BRIDGE_TARGET ?? "auto";
 const LINUX_DEVICE = process.env.PRINT_BRIDGE_DEVICE ?? "/dev/usb/lp0";
-const WINDOWS_PRINTER_NAME = process.env.PRINT_BRIDGE_PRINTER_NAME ?? "";
+const WINDOWS_PRINTER_NAME = process.env.PRINT_BRIDGE_PRINTER_NAME ?? "POS-58";
 const SHOULD_CUT = process.env.PRINT_BRIDGE_CUT === "1";
 const MAX_BODY_BYTES = Number.parseInt(process.env.PRINT_BRIDGE_MAX_BODY_BYTES ?? "65536", 10);
 const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.PRINT_BRIDGE_ALLOWED_ORIGINS);
