@@ -8,9 +8,9 @@
     "build": "next build",
     "start": "next start",
     "print-bridge": "node print-bridge/server.mjs",
-    "build:print-bridge": "pkg print-bridge/server.mjs --config print-bridge/pkg.config.json",
-    "build:print-bridge:linux": "pkg print-bridge/server.mjs --config print-bridge/pkg.config.json --targets node22-linux-x64",
-    "build:print-bridge:windows": "pkg print-bridge/server.mjs --config print-bridge/pkg.config.json --targets node22-win-x64",
+    "build:print-bridge": "pkg print-bridge/server.mjs --config print-bridge/pkg.config.json --public-packages \"*\" --public",
+    "build:print-bridge:linux": "pkg print-bridge/server.mjs --config print-bridge/pkg.config.json --targets node22-linux-x64 --public-packages \"*\" --public",
+    "build:print-bridge:windows": "pkg print-bridge/server.mjs --config print-bridge/pkg.config.json --targets node22-win-x64 --public-packages \"*\" --public",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
