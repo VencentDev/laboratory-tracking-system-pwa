@@ -245,6 +245,7 @@ function setCorsHeaders(request, response) {
   response.setHeader("Access-Control-Allow-Origin", allowedOrigin);
   response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  response.setHeader("Access-Control-Allow-Private-Network", "true");
   response.setHeader("Vary", "Origin");
 }
 
