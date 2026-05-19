@@ -47,6 +47,20 @@ export type ReceiptItem = {
   borrowedAt: Date | null;
 };
 
+export type BatchBorrowSession = {
+  borrowerId: string;
+  borrowerName: string;
+  borrowerSchoolId: string | null;
+  items: ReceiptItem[];
+};
+
+export type BatchReturnSession = {
+  borrowerName: string;
+  borrowerSchoolId: string | null;
+  returnedItems: ReceiptItem[];
+  unreturnedItems: ReceiptItem[];
+};
+
 export type BorrowOutstandingReceipt = {
   borrowerId: string;
   borrowerSchoolId: string | null;

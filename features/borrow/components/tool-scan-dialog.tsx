@@ -3,11 +3,15 @@
 import type { FormEvent, RefObject } from "react";
 import { useRef } from "react";
 
+import { Button } from "@/core/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/core/ui/dialog";
 import { Input } from "@/core/ui/input";
 import { OverlappingField } from "@/core/ui/overlapping-field";
+import { Separator } from "@/components/ui/separator";
 import { BorrowerSelector } from "@/features/borrow/components/borrower-selector";
-import type { ScanMode } from "@/features/borrow/types";
+import { BorrowSessionPreview } from "@/features/borrow/components/borrow-session-preview";
+import { ReturnSessionPreview } from "@/features/borrow/components/return-session-preview";
+import type { BatchBorrowSession, BatchReturnSession, ScanMode } from "@/features/borrow/types";
 import type { BorrowerProfile } from "@/features/borrowers/types";
 
 type ToolScanDialogProps = {
@@ -22,6 +26,9 @@ type ToolScanDialogProps = {
   keepBarcodeFocused: boolean;
   barcodeRef: RefObject<HTMLInputElement | null>;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  batchBorrowSession: BatchBorrowSession | null;
+  batchReturnSession: BatchReturnSession | null;
+  onDone: () => void;
 };
 
 const dialogMeta: Record<
@@ -36,14 +43,14 @@ const dialogMeta: Record<
   borrow: {
     title: "Borrow Tools",
     description:
-      "Select a borrower, then scan a tool barcode. Each successful borrow opens a dedicated receipt modal with the borrower's current borrowed-item table.",
+      "Select a borrower, then scan tool barcodes. The receipt preview updates after each successful borrow.",
     barcodeLabel: "Tool Barcode",
     barcodePlaceholder: "Scan a barcode to borrow",
   },
   return: {
     title: "Return Tools",
     description:
-      "Scan a tool barcode to review it first, then confirm the return and open a receipt modal for the borrower's remaining outstanding items.",
+      "Scan a tool barcode to review it first, then confirm the return. The receipt preview updates after each confirmed return.",
     barcodeLabel: "Tool Barcode",
     barcodePlaceholder: "Scan a barcode to return",
   },
@@ -61,6 +68,9 @@ export function ToolScanDialog({
   keepBarcodeFocused,
   barcodeRef,
   onSubmit,
+  batchBorrowSession,
+  batchReturnSession,
+  onDone,
 }: ToolScanDialogProps) {
   const meta = dialogMeta[mode];
   const isBorrowMode = mode === "borrow";
@@ -69,36 +79,54 @@ export function ToolScanDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+      <DialogContent className="max-h-[85vh] max-w-[72rem] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{meta.title}</DialogTitle>
           <DialogDescription>{meta.description}</DialogDescription>
         </DialogHeader>
 
-        <form ref={formRef} onSubmit={onSubmit} className="space-y-5">
-          {isBorrowMode ? (
-            <BorrowerSelectionSection
-              selectedBorrowerId={selectedBorrowerId}
-              onBorrowerChange={onBorrowerChange}
-              borrowers={borrowers}
-              isBorrowersLoading={isBorrowersLoading}
-              isSubmitting={isSubmitting}
-              needsBorrower={needsBorrower}
-            />
-          ) : (
-            <ReturnInfoBanner />
-          )}
+        <div className="grid gap-5 lg:grid-cols-[minmax(22rem,24rem)_auto_minmax(0,1fr)]">
+          <form ref={formRef} onSubmit={onSubmit} className="space-y-5">
+            {isBorrowMode ? (
+              <BorrowerSelectionSection
+                selectedBorrowerId={selectedBorrowerId}
+                onBorrowerChange={onBorrowerChange}
+                borrowers={borrowers}
+                isBorrowersLoading={isBorrowersLoading}
+                isSubmitting={isSubmitting}
+                needsBorrower={needsBorrower}
+              />
+            ) : (
+              <ReturnInfoBanner />
+            )}
 
-          <BarcodeInputSection
-            barcodeRef={barcodeRef}
-            barcodeLabel={meta.barcodeLabel}
-            barcodePlaceholder={meta.barcodePlaceholder}
-            isSubmitting={isSubmitting}
-            disabled={needsBorrower}
-            formRef={formRef}
-            keepBarcodeFocused={keepBarcodeFocused}
-          />
-        </form>
+            <BarcodeInputSection
+              barcodeRef={barcodeRef}
+              barcodeLabel={meta.barcodeLabel}
+              barcodePlaceholder={meta.barcodePlaceholder}
+              isSubmitting={isSubmitting}
+              disabled={needsBorrower}
+              formRef={formRef}
+              keepBarcodeFocused={keepBarcodeFocused}
+            />
+          </form>
+
+          <Separator orientation="vertical" className="hidden lg:block" />
+
+          <div className="min-w-0">
+            {isBorrowMode ? (
+              <BorrowSessionPreview session={batchBorrowSession} />
+            ) : (
+              <ReturnSessionPreview session={batchReturnSession} />
+            )}
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <Button type="button" onClick={onDone}>
+            Done
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -138,7 +166,7 @@ function BorrowerSelectionSection({
         </p>
       ) : (
         <p className="text-xs text-muted-foreground">
-          Each successful scan opens the borrower&apos;s receipt modal with the updated borrowed-item table.
+          Each successful scan updates the receipt preview without closing this dialog.
         </p>
       )}
     </div>
@@ -148,8 +176,8 @@ function BorrowerSelectionSection({
 function ReturnInfoBanner() {
   return (
     <div className="rounded-2xl border border-border/50 bg-muted/60 px-4 py-3 text-sm text-foreground">
-      Return scanning does not require borrower selection. Each confirmed return opens the
-      borrower&apos;s receipt modal with the remaining not-yet-returned items.
+      Return scanning does not require borrower selection. Each confirmed return updates the
+      borrower&apos;s receipt preview with the remaining not-yet-returned items.
     </div>
   );
 }

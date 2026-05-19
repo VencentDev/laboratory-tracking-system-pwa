@@ -3,10 +3,8 @@
 import { exportTransactionsCsv } from "@/core/backup/export-data";
 import { importTransactionsCsv } from "@/core/backup/import-data";
 import { Button } from "@/core/ui/button";
-import { BorrowReceiptDialog } from "@/features/borrow/components/borrow-receipt-dialog";
 import { CsvTransferActions } from "@/core/ui/csv-transfer-actions";
 import { PageHeader } from "@/core/ui/page-header";
-import { ReturnReceiptDialog } from "@/features/borrow/components/return-receipt-dialog";
 import { BorrowSummaryCards } from "@/features/borrow/components/borrow-summary-cards";
 import { ReturnReviewDialog } from "@/features/borrow/components/return-review-dialog";
 import { BorrowTransactionHistory } from "@/features/borrow/components/borrow-transaction-history";
@@ -23,17 +21,14 @@ export function ScanPageContent() {
     isOpen,
     mode,
     selectedBorrowerId,
-    borrowOutstandingReceipt,
-    returnOutstandingReceipt,
+    batchBorrowSession,
+    batchReturnSession,
     pendingReturn,
     barcodeRef,
     isSubmitting,
     openScanner,
     closeScanner,
-    closeBorrowReceipt,
-    closeReturnReceipt,
-    continueBorrowFromReceipt,
-    continueReturnFromReceipt,
+    handleDone,
     handleBorrowerChange,
     handleSubmit,
     cancelPendingReturn,
@@ -59,7 +54,7 @@ export function ScanPageContent() {
       <PageHeader
         eyebrow="Scanning"
         title="Borrow & Return"
-        description="Scan a borrow or return, then review the updated receipt in its own modal with a table of the borrower's active items."
+        description="Scan borrow or return transactions in a continuous session, then print the final receipt when finished."
         actions={
           <div className="flex gap-2">
             <CsvTransferActions
@@ -115,6 +110,9 @@ export function ScanPageContent() {
         keepBarcodeFocused={mode === "return" && pendingReturn === null}
         barcodeRef={barcodeRef}
         onSubmit={handleSubmit}
+        batchBorrowSession={batchBorrowSession}
+        batchReturnSession={batchReturnSession}
+        onDone={handleDone}
       />
 
       <ReturnReviewDialog
@@ -122,18 +120,6 @@ export function ScanPageContent() {
         isSubmitting={isSubmitting}
         onCancel={cancelPendingReturn}
         onConfirm={confirmPendingReturn}
-      />
-
-      <BorrowReceiptDialog
-        receipt={borrowOutstandingReceipt}
-        onClose={closeBorrowReceipt}
-        onContinue={continueBorrowFromReceipt}
-      />
-
-      <ReturnReceiptDialog
-        receipt={returnOutstandingReceipt}
-        onClose={closeReturnReceipt}
-        onContinue={continueReturnFromReceipt}
       />
     </div>
   );
