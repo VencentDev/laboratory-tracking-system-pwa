@@ -7,16 +7,23 @@ import type {
 const RECEIPT_WIDTH = 32;
 const PRINT_ROOT_ID = "receipt-print-root";
 const PRINT_STYLE_ID = "receipt-print-style";
+const DEFAULT_BRIDGE_URL = "http://localhost:9321";
+const BRIDGE_TIMEOUT_MS = 2500;
 
-export function printBorrowReceipt(session: BatchBorrowSession): void {
-  printReceipt(buildBorrowReceipt(session));
+export type ReceiptPrintResult = {
+  method: "bridge" | "browser" | "none";
+  fallbackReason?: string;
+};
+
+export async function printBorrowReceipt(session: BatchBorrowSession): Promise<ReceiptPrintResult> {
+  return printReceipt(buildBorrowReceiptText(session), "borrow");
 }
 
-export function printReturnReceipt(session: BatchReturnSession): void {
-  printReceipt(buildReturnReceipt(session));
+export async function printReturnReceipt(session: BatchReturnSession): Promise<ReceiptPrintResult> {
+  return printReceipt(buildReturnReceiptText(session), "return");
 }
 
-function buildBorrowReceipt(session: BatchBorrowSession): string {
+export function buildBorrowReceiptText(session: BatchBorrowSession): string {
   return [
     line(),
     center("LAB TRACKING SYSTEM"),
@@ -34,7 +41,7 @@ function buildBorrowReceipt(session: BatchBorrowSession): string {
   ].join("\n");
 }
 
-function buildReturnReceipt(session: BatchReturnSession): string {
+export function buildReturnReceiptText(session: BatchReturnSession): string {
   return [
     line(),
     center("LAB TRACKING SYSTEM"),
@@ -53,7 +60,70 @@ function buildReturnReceipt(session: BatchReturnSession): string {
   ].join("\n");
 }
 
-function printReceipt(receiptText: string): void {
+async function printReceipt(
+  receiptText: string,
+  receiptType: "borrow" | "return",
+): Promise<ReceiptPrintResult> {
+  if (isBridgePrintEnabled()) {
+    const bridgeResult = await tryBridgePrint(receiptText, receiptType);
+
+    if (bridgeResult.ok) {
+      return { method: "bridge" };
+    }
+
+    printBrowserReceipt(receiptText);
+    return { method: "browser", fallbackReason: bridgeResult.error };
+  }
+
+  printBrowserReceipt(receiptText);
+  return { method: "browser" };
+}
+
+async function tryBridgePrint(
+  receiptText: string,
+  receiptType: "borrow" | "return",
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const abortController = new AbortController();
+  const timeoutId = window.setTimeout(() => abortController.abort(), BRIDGE_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${getBridgeUrl()}/print`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      signal: abortController.signal,
+      body: JSON.stringify({
+        receiptType,
+        content: receiptText,
+      }),
+    });
+
+    if (!response.ok) {
+      return { ok: false, error: `Bridge returned HTTP ${response.status}` };
+    }
+
+    const payload: unknown = await response.json();
+
+    if (isBridgeSuccess(payload)) {
+      return { ok: true };
+    }
+
+    return {
+      ok: false,
+      error: isBridgeError(payload) ? payload.error : "Bridge rejected the print job",
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Could not reach the print bridge",
+    };
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
+function printBrowserReceipt(receiptText: string): void {
   if (typeof document === "undefined" || typeof window === "undefined") {
     return;
   }
@@ -73,6 +143,40 @@ function printReceipt(receiptText: string): void {
   root.appendChild(receipt);
   injectPrintStyle();
   window.print();
+}
+
+function isBridgePrintEnabled(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return window.localStorage.getItem("receiptPrintMode") !== "browser";
+}
+
+function getBridgeUrl(): string {
+  if (typeof window === "undefined") {
+    return DEFAULT_BRIDGE_URL;
+  }
+
+  const localBridgeUrl = window.localStorage.getItem("receiptPrintBridgeUrl");
+  const envBridgeUrl = process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL;
+
+  return (localBridgeUrl || envBridgeUrl || DEFAULT_BRIDGE_URL).replace(/\/$/, "");
+}
+
+function isBridgeSuccess(payload: unknown): payload is { ok: true } {
+  return typeof payload === "object" && payload !== null && "ok" in payload && payload.ok === true;
+}
+
+function isBridgeError(payload: unknown): payload is { ok: false; error: string } {
+  return (
+    typeof payload === "object" &&
+    payload !== null &&
+    "ok" in payload &&
+    payload.ok === false &&
+    "error" in payload &&
+    typeof payload.error === "string"
+  );
 }
 
 function injectPrintStyle(): void {

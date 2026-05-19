@@ -329,15 +329,35 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
     processScan,
   ]);
 
-  const handleDone = useCallback(() => {
+  const handleDone = useCallback(async () => {
+    let printResult: Awaited<ReturnType<typeof printBorrowReceipt>> | null = null;
+
     if (mode === "borrow" && batchBorrowSession) {
       setReceiptToPrint(batchBorrowSession);
-      printBorrowReceipt(batchBorrowSession);
+      toast.loading("Printing receipt...", { id: "receipt-print" });
+      printResult = await printBorrowReceipt(batchBorrowSession);
     }
 
     if (mode === "return" && batchReturnSession) {
       setReceiptToPrint(batchReturnSession);
-      printReturnReceipt(batchReturnSession);
+      toast.loading("Printing receipt...", { id: "receipt-print" });
+      printResult = await printReturnReceipt(batchReturnSession);
+    }
+
+    if (printResult?.method === "bridge") {
+      toast.success("Receipt printed", {
+        id: "receipt-print",
+        description: "The local print bridge accepted the receipt.",
+        duration: 4000,
+      });
+    } else if (printResult?.method === "browser") {
+      toast.warning("Direct printer unavailable", {
+        id: "receipt-print",
+        description: printResult.fallbackReason
+          ? `${printResult.fallbackReason}. Opening browser print instead.`
+          : "Opening browser print instead.",
+        duration: 6000,
+      });
     }
 
     closeScanner();
