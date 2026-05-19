@@ -8,10 +8,14 @@ import {
   usePreviewReturn,
   useProcessScan,
 } from "@/features/borrow/hooks/use-borrow";
+import {
+  printBorrowReceipt,
+  printReturnReceipt,
+} from "@/features/borrow/lib/receipt-print";
 import type {
-  BorrowOutstandingReceipt,
+  BatchBorrowSession,
+  BatchReturnSession,
   ReceiptItem,
-  ReturnOutstandingReceipt,
   ReturnPreview,
   ScanFeedback,
   ScanMode,
@@ -30,8 +34,9 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
   const [selectedBorrowerId, setSelectedBorrowerId] = useState("");
   const [scanResult, setScanResult] = useState<ScanFeedback | null>(null);
   const [lastScannedBarcode, setLastScannedBarcode] = useState<string | null>(null);
-  const [borrowOutstandingReceipt, setBorrowOutstandingReceipt] = useState<BorrowOutstandingReceipt | null>(null);
-  const [returnOutstandingReceipt, setReturnOutstandingReceipt] = useState<ReturnOutstandingReceipt | null>(null);
+  const [batchBorrowSession, setBatchBorrowSession] = useState<BatchBorrowSession | null>(null);
+  const [batchReturnSession, setBatchReturnSession] = useState<BatchReturnSession | null>(null);
+  const [receiptToPrint, setReceiptToPrint] = useState<BatchBorrowSession | BatchReturnSession | null>(null);
   const [pendingReturn, setPendingReturn] = useState<ReturnPreview | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const barcodeRef = useRef<HTMLInputElement>(null);
@@ -85,8 +90,9 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
     setMode(scannerMode);
     setScanResult(null);
     setLastScannedBarcode(null);
-    setBorrowOutstandingReceipt(null);
-    setReturnOutstandingReceipt(null);
+    setBatchBorrowSession(null);
+    setBatchReturnSession(null);
+    setReceiptToPrint(null);
     setPendingReturn(null);
     setIsPreviewLoading(false);
 
@@ -103,8 +109,6 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
     setIsOpen(false);
     setScanResult(null);
     setLastScannedBarcode(null);
-    setBorrowOutstandingReceipt(null);
-    setReturnOutstandingReceipt(null);
     setPendingReturn(null);
     setIsPreviewLoading(false);
   }, []);
@@ -126,6 +130,7 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
 
       if (mode === "borrow") {
         setLastScannedBarcode(null);
+        setBatchBorrowSession(null);
         clearBarcodeInput();
       }
     },
@@ -142,52 +147,10 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
     };
   }, []);
 
-  const refreshBorrowOutstandingReceipt = useCallback(
-    async (result: ScanResult) => {
-      const borrowerId = result.borrowerId;
-
-      if (!borrowerId) {
-        return;
-      }
-
-      const borrower = {
-        borrowerId,
-        borrowerSchoolId: result.borrowerSchoolId,
-        borrowerName: result.borrowerName,
-      };
-      const outstandingItems = await loadOutstandingBorrowedItems(borrower);
-
-      setBorrowOutstandingReceipt({
-        ...borrower,
-        items: outstandingItems,
-        updatedAt: result.recordedAt,
-      });
-    },
-    [loadOutstandingBorrowedItems],
-  );
-
-  const refreshReturnOutstandingReceipt = useCallback(
-    async (preview: ReturnPreview, result: ScanResult) => {
-      const borrower = {
-        borrowerId: preview.borrowerId,
-        borrowerSchoolId: preview.borrowerSchoolId,
-        borrowerName: preview.borrowerName,
-      };
-      const outstandingItems = await loadOutstandingBorrowedItems(borrower);
-
-      setReturnOutstandingReceipt({
-        ...borrower,
-        lastReturnedItem: createReceiptItemFromPreview(preview),
-        items: outstandingItems,
-        updatedAt: result.recordedAt,
-      });
-    },
-    [createReceiptItemFromPreview, loadOutstandingBorrowedItems],
-  );
-
   const handleBorrowSuccess = useCallback(
-    async (result: ScanResult) => {
+    (result: ScanResult) => {
       const successMessage = `${result.toolName} checked out to ${result.borrowerName}`;
+      const borrowerId = result.borrowerId;
 
       toast.success(successMessage, {
         description: `Barcode: ${result.barcode}`,
@@ -200,14 +163,49 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
         clearBarcodeInput();
       }
 
-      setIsOpen(false);
-      await refreshBorrowOutstandingReceipt(result);
+      if (!borrowerId) {
+        return;
+      }
+
+      const item: ReceiptItem = {
+        toolId: result.toolId,
+        toolName: result.toolName,
+        barcode: result.barcode,
+        category: result.category,
+        borrowedAt: result.recordedAt,
+      };
+
+      setBatchBorrowSession((currentSession) => {
+        if (!currentSession || currentSession.borrowerId !== borrowerId) {
+          return {
+            borrowerId,
+            borrowerName: result.borrowerName,
+            borrowerSchoolId: result.borrowerSchoolId,
+            items: [item],
+          };
+        }
+
+        return {
+          ...currentSession,
+          borrowerName: result.borrowerName,
+          borrowerSchoolId: result.borrowerSchoolId,
+          items: [...currentSession.items, item],
+        };
+      });
     },
-    [autoClearOnSuccess, clearBarcodeInput, refreshBorrowOutstandingReceipt],
+    [autoClearOnSuccess, clearBarcodeInput],
   );
 
   const handleReturnSuccess = useCallback(
     async (preview: ReturnPreview, result: ScanResult) => {
+      const returnedItem = createReceiptItemFromPreview(preview);
+      const borrower = {
+        borrowerId: preview.borrowerId,
+        borrowerSchoolId: preview.borrowerSchoolId,
+        borrowerName: preview.borrowerName,
+      };
+      const outstandingItems = await loadOutstandingBorrowedItems(borrower);
+
       toast.success(`${result.toolName} returned successfully`, {
         description: `Previously with ${result.borrowerName}`,
         duration: 5000,
@@ -219,10 +217,27 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
         clearBarcodeInput();
       }
 
-      setIsOpen(false);
-      await refreshReturnOutstandingReceipt(preview, result);
+      setBatchReturnSession((currentSession) => {
+        const isSameReturnee =
+          currentSession?.borrowerName === preview.borrowerName &&
+          currentSession.borrowerSchoolId === preview.borrowerSchoolId;
+        const currentUnreturnedItems = isSameReturnee
+          ? currentSession.unreturnedItems
+          : outstandingItems;
+        const currentReturnedItems = isSameReturnee ? currentSession.returnedItems : [];
+        const unreturnedItems = currentUnreturnedItems.filter(
+          (item) => item.toolId !== returnedItem.toolId,
+        );
+
+        return {
+          borrowerName: preview.borrowerName,
+          borrowerSchoolId: preview.borrowerSchoolId,
+          returnedItems: [...currentReturnedItems, returnedItem],
+          unreturnedItems,
+        };
+      });
     },
-    [autoClearOnSuccess, clearBarcodeInput, refreshReturnOutstandingReceipt],
+    [autoClearOnSuccess, clearBarcodeInput, createReceiptItemFromPreview, loadOutstandingBorrowedItems],
   );
 
   const handleScanError = useCallback(
@@ -313,6 +328,40 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
     pendingReturn,
     processScan,
   ]);
+
+  const handleDone = useCallback(async () => {
+    let printResult: Awaited<ReturnType<typeof printBorrowReceipt>> | null = null;
+
+    if (mode === "borrow" && batchBorrowSession) {
+      setReceiptToPrint(batchBorrowSession);
+      toast.loading("Printing receipt...", { id: "receipt-print" });
+      printResult = await printBorrowReceipt(batchBorrowSession);
+    }
+
+    if (mode === "return" && batchReturnSession) {
+      setReceiptToPrint(batchReturnSession);
+      toast.loading("Printing receipt...", { id: "receipt-print" });
+      printResult = await printReturnReceipt(batchReturnSession);
+    }
+
+    if (printResult?.method === "bridge") {
+      toast.success("Receipt printed", {
+        id: "receipt-print",
+        description: "The local print bridge accepted the receipt.",
+        duration: 4000,
+      });
+    } else if (printResult?.method === "browser") {
+      toast.warning("Direct printer unavailable", {
+        id: "receipt-print",
+        description: printResult.fallbackReason
+          ? `${printResult.fallbackReason}. Opening browser print instead.`
+          : "Opening browser print instead.",
+        duration: 6000,
+      });
+    }
+
+    closeScanner();
+  }, [batchBorrowSession, batchReturnSession, closeScanner, mode]);
 
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -407,25 +456,15 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
     mode,
     selectedBorrowerId,
     scanResult,
-    borrowOutstandingReceipt,
-    returnOutstandingReceipt,
+    batchBorrowSession,
+    batchReturnSession,
+    receiptToPrint,
     pendingReturn,
     barcodeRef,
     isSubmitting: processScan.isPending || isPreviewLoading,
     openScanner,
     closeScanner,
-    closeBorrowReceipt: () => setBorrowOutstandingReceipt(null),
-    closeReturnReceipt: () => setReturnOutstandingReceipt(null),
-    continueBorrowFromReceipt: () => {
-      if (!borrowOutstandingReceipt) {
-        return;
-      }
-
-      openScanner("borrow", { borrowerId: borrowOutstandingReceipt.borrowerId });
-    },
-    continueReturnFromReceipt: () => {
-      openScanner("return");
-    },
+    handleDone,
     handleBorrowerChange,
     handleSubmit,
     cancelPendingReturn,

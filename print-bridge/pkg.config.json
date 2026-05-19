@@ -1,0 +1,14 @@
+{
+  "name": "laboratory-print-bridge",
+  "pkg": {
+    "assets": [
+      "print-bridge/windows-raw-print.ps1"
+    ],
+    "compress": "GZip",
+    "outputPath": "dist-print-bridge",
+    "targets": [
+      "node22-linux-x64",
+      "node22-win-x64"
+    ]
+  }
+}

@@ -2,10 +2,15 @@
   "name": "my-app",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.27.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "print-bridge": "node print-bridge/server.mjs",
+    "build:print-bridge": "pkg print-bridge/server.mjs --config print-bridge/pkg.config.json",
+    "build:print-bridge:linux": "pkg print-bridge/server.mjs --config print-bridge/pkg.config.json --targets node22-linux-x64",
+    "build:print-bridge:windows": "pkg print-bridge/server.mjs --config print-bridge/pkg.config.json --targets node22-win-x64",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
@@ -38,6 +43,7 @@
     "@types/node": "^25.5.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@yao-pkg/pkg": "^6.19.0",
     "autoprefixer": "^10.4.27",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.2",
