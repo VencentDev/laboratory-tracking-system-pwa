@@ -38,6 +38,14 @@ Start the bridge:
 pnpm print-bridge
 ```
 
+Build standalone bridge executables:
+
+```bash
+pnpm build:print-bridge
+```
+
+The packaged outputs are written to `dist-print-bridge/` for Windows and Linux x64. Users can run the executable directly instead of installing Node.js and pnpm.
+
 Default Arch/Linux target:
 
 ```txt
@@ -51,4 +59,3 @@ http://localhost:9321
 ```
 
 See [Direct Receipt Printing Manual](docs/direct-receipt-printing.md) for Arch Linux, Windows, Vercel deployment, and cashier workflow setup.
-

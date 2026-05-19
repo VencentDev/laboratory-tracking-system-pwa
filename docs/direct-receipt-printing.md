@@ -49,6 +49,39 @@ From the project root:
 pnpm print-bridge
 ```
 
+## Build Packaged Bridge Executables
+
+For a user-friendly install, build standalone executables:
+
+```bash
+pnpm build:print-bridge
+```
+
+This creates Windows and Linux x64 bridge binaries in:
+
+```txt
+dist-print-bridge/
+```
+
+Build only one platform when needed:
+
+```bash
+pnpm build:print-bridge:windows
+pnpm build:print-bridge:linux
+```
+
+The packaged executable still starts the same local bridge at `http://localhost:9321`.
+Users can run it directly instead of installing Node.js and pnpm.
+
+Windows still requires the POS printer driver and the installed printer queue name:
+
+```powershell
+$env:PRINT_BRIDGE_PRINTER_NAME="POS-5890"
+.\laboratory-print-bridge-win.exe
+```
+
+Linux still requires access to the USB printer device, usually `/dev/usb/lp0`.
+
 Health check:
 
 ```bash

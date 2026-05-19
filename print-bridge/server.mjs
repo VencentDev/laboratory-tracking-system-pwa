@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { writeFile, unlink } from "node:fs/promises";
+import { readFile, writeFile, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -138,7 +138,7 @@ async function printWindowsRaw(bytes) {
   await writeFile(receiptPath, bytes);
 
   try {
-    const scriptPath = fileURLToPath(new URL("./windows-raw-print.ps1", import.meta.url));
+    const scriptPath = await getWindowsRawPrintScriptPath();
     await runCommand("powershell.exe", [
       "-NoProfile",
       "-ExecutionPolicy",
@@ -153,6 +153,18 @@ async function printWindowsRaw(bytes) {
   } finally {
     await unlink(receiptPath).catch(() => undefined);
   }
+}
+
+async function getWindowsRawPrintScriptPath() {
+  const sourcePath = fileURLToPath(new URL("./windows-raw-print.ps1", import.meta.url));
+
+  if (!process.pkg) {
+    return sourcePath;
+  }
+
+  const scriptPath = join(tmpdir(), "laboratory-windows-raw-print.ps1");
+  await writeFile(scriptPath, await readFile(sourcePath));
+  return scriptPath;
 }
 
 function runCommand(command, args) {
