@@ -45,7 +45,7 @@ export function AdminSessionDetailPageContent() {
     );
   }
 
-  const { session, transactions } = sessionDetail;
+  const { session, transactions, activities } = sessionDetail;
   const borrowedCount = transactions.filter((transaction) => transaction.transactionType === "borrowed").length;
   const returnedCount = transactions.filter((transaction) => transaction.transactionType === "returned").length;
 
@@ -95,13 +95,58 @@ export function AdminSessionDetailPageContent() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium tracking-normal text-muted-foreground">Returned</CardTitle>
+            <CardTitle className="text-sm font-medium tracking-normal text-muted-foreground">Added Records</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold tracking-[-0.03em]">{returnedCount}</div>
+            <div className="text-3xl font-semibold tracking-[-0.03em]">{activities.length}</div>
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Session Summary</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-3">
+          <div>
+            <div className="text-sm text-muted-foreground">Borrowed</div>
+            <div className="text-2xl font-semibold tracking-[-0.03em]">{borrowedCount}</div>
+          </div>
+          <div>
+            <div className="text-sm text-muted-foreground">Returned</div>
+            <div className="text-2xl font-semibold tracking-[-0.03em]">{returnedCount}</div>
+          </div>
+          <div>
+            <div className="text-sm text-muted-foreground">Registry Activity</div>
+            <div className="text-2xl font-semibold tracking-[-0.03em]">{activities.length}</div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {activities.length ? (
+        <DataTableSurface>
+          <DataTable className="min-w-[720px]">
+            <thead>
+              <tr>
+                <DataTableHeaderCell>Activity</DataTableHeaderCell>
+                <DataTableHeaderCell>Record</DataTableHeaderCell>
+                <DataTableHeaderCell>Details</DataTableHeaderCell>
+                <DataTableHeaderCell>Date</DataTableHeaderCell>
+              </tr>
+            </thead>
+            <tbody>
+              {activities.map((activity) => (
+                <tr key={activity.id}>
+                  <DataTableCell>{formatActivityType(activity.activityType)}</DataTableCell>
+                  <DataTableCell className="font-medium text-foreground">{activity.entityLabel}</DataTableCell>
+                  <DataTableCell>{activity.details ?? "N/A"}</DataTableCell>
+                  <DataTableCell>{formatRecordedAt(activity.recordedAt)}</DataTableCell>
+                </tr>
+              ))}
+            </tbody>
+          </DataTable>
+        </DataTableSurface>
+      ) : null}
 
       {transactions.length ? (
         <DataTableSurface>
@@ -142,4 +187,13 @@ export function AdminSessionDetailPageContent() {
       )}
     </div>
   );
+}
+
+function formatActivityType(activityType: "borrower_created" | "tool_created") {
+  switch (activityType) {
+    case "borrower_created":
+      return "Added borrower";
+    case "tool_created":
+      return "Added item";
+  }
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
 import { SearchIcon, SquareUserRoundIcon, X } from "lucide-react";
 
 import { exportBorrowersCsv } from "@/core/backup/export-data";
@@ -10,15 +11,32 @@ import { CsvTransferActions } from "@/core/ui/csv-transfer-actions";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/core/ui/dialog";
 import { Input } from "@/core/ui/input";
 import { PageHeader } from "@/core/ui/page-header";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { getSessionActivities } from "@/features/auth/lib/auth-repository";
 import { BorrowerForm } from "@/features/borrowers/components/borrower-form";
 import { BorrowerList } from "@/features/borrowers/components/borrower-list";
 import type { BorrowerProfile } from "@/features/borrowers/types";
 
 export function RegisterBorrowerPageContent() {
+  const { session } = useAuth();
+  const toolkeeperActivities = useLiveQuery(
+    () => session?.role === "toolkeeper" ? getSessionActivities(session.sessionId) : Promise.resolve([]),
+    [session],
+    [],
+  );
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedBorrower, setSelectedBorrower] = useState<BorrowerProfile | undefined>();
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "student" | "instructor" | "staff">("all");
+  const editableBorrowerIds = useMemo(
+    () =>
+      new Set(
+        toolkeeperActivities
+          .filter((activity) => activity.activityType === "borrower_created")
+          .map((activity) => activity.entityId),
+      ),
+    [toolkeeperActivities],
+  );
 
   function openCreateBorrowerDialog() {
     setSelectedBorrower(undefined);
@@ -26,6 +44,10 @@ export function RegisterBorrowerPageContent() {
   }
 
   function openEditBorrowerDialog(borrower: BorrowerProfile) {
+    if (session?.role === "toolkeeper" && !editableBorrowerIds.has(borrower.id)) {
+      return;
+    }
+
     setSelectedBorrower(borrower);
     setIsFormOpen(true);
   }
@@ -47,11 +69,13 @@ export function RegisterBorrowerPageContent() {
         description="Create and maintain borrower records with the identity details needed for accountability and reporting."
         actions={
           <>
-            <CsvTransferActions
-              label="borrowers"
-              onExport={exportBorrowersCsv}
-              onImport={importBorrowersCsv}
-            />
+            {session?.role === "admin" ? (
+              <CsvTransferActions
+                label="borrowers"
+                onExport={exportBorrowersCsv}
+                onImport={importBorrowersCsv}
+              />
+            ) : null}
             <Button type="button" className="gap-2 px-5" onClick={openCreateBorrowerDialog}>
               <SquareUserRoundIcon className="h-4 w-4" />
               Record Borrower
@@ -101,7 +125,13 @@ export function RegisterBorrowerPageContent() {
       </div>
       {/* --- End Filter Section --- */}
 
-      <BorrowerList onEdit={openEditBorrowerDialog} searchQuery={searchQuery} typeFilter={typeFilter} />
+      <BorrowerList
+        allowDelete={session?.role === "admin"}
+        canEdit={(borrower) => session?.role !== "toolkeeper" || editableBorrowerIds.has(borrower.id)}
+        onEdit={openEditBorrowerDialog}
+        searchQuery={searchQuery}
+        typeFilter={typeFilter}
+      />
 
       <Dialog
         open={isFormOpen}
@@ -128,6 +158,7 @@ export function RegisterBorrowerPageContent() {
           <BorrowerForm
             key={selectedBorrower?.id ?? "create"}
             borrower={selectedBorrower}
+            activitySessionId={session?.role === "toolkeeper" ? session.sessionId : undefined}
             onSuccess={(mode) => {
               if (mode === "update") {
                 closeBorrowerDialog();

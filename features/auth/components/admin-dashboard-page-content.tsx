@@ -15,12 +15,13 @@ import { DateRangeFilter } from "@/core/ui/date-range-filter";
 import { DataTable, DataTableCell, DataTableHeaderCell, DataTableSurface } from "@/core/ui/data-table";
 import { Input } from "@/core/ui/input";
 import { formatRecordedAt } from "@/features/borrow/lib/borrow-formatters";
-import { listToolkeeperSessions } from "@/features/auth/lib/auth-repository";
+import { listToolkeeperActivities, listToolkeeperSessions } from "@/features/auth/lib/auth-repository";
 
 export function AdminDashboardPageContent() {
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [searchQuery, setSearchQuery] = useState("");
   const sessions = useLiveQuery(() => listToolkeeperSessions(), [], []);
+  const activities = useLiveQuery(() => listToolkeeperActivities(), [], []);
   const transactions = useLiveQuery(() => appDb.transactions.toArray(), [], []);
   const filteredSessions = useMemo(() => {
     const normalizedSearchQuery = searchQuery.trim().toLowerCase();
@@ -40,23 +41,26 @@ export function AdminDashboardPageContent() {
         );
       });
   }, [dateRange, searchQuery, sessions]);
-  const borrowedCountsBySessionId = useMemo(() => {
+  const activityCountsBySessionId = useMemo(() => {
     const counts = new Map<number, number>();
 
     for (const session of sessions) {
+      const transactionCount = transactions.filter(
+        (transaction) =>
+          transaction.recordedAt >= session.loginAt &&
+          (!session.logoutAt || transaction.recordedAt <= session.logoutAt),
+      ).length;
+      const registryActivityCount = activities.filter((activity) => activity.sessionId === session.id).length;
+
       counts.set(
         session.id,
-        transactions.filter(
-          (transaction) =>
-            transaction.transactionType === "borrowed" &&
-            transaction.recordedAt >= session.loginAt &&
-            (!session.logoutAt || transaction.recordedAt <= session.logoutAt),
-        ).length,
+        transactionCount + registryActivityCount,
       );
     }
 
     return counts;
-  }, [sessions, transactions]);
+  }, [activities, sessions, transactions]);
+  const totalActivityCount = transactions.length + activities.length;
 
   return (
     <div className="space-y-6">
@@ -74,11 +78,11 @@ export function AdminDashboardPageContent() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium tracking-normal text-muted-foreground">
-              Total Transactions
+              Total Activity
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold tracking-[-0.03em]">{transactions.length}</div>
+            <div className="text-3xl font-semibold tracking-[-0.03em]">{totalActivityCount}</div>
           </CardContent>
         </Card>
       </div>
@@ -125,7 +129,7 @@ export function AdminDashboardPageContent() {
               <DataTableHeaderCell>Section</DataTableHeaderCell>
               <DataTableHeaderCell>Login</DataTableHeaderCell>
               <DataTableHeaderCell>Logout</DataTableHeaderCell>
-              <DataTableHeaderCell>Transactions</DataTableHeaderCell>
+              <DataTableHeaderCell>Activity</DataTableHeaderCell>
               <DataTableHeaderCell>Actions</DataTableHeaderCell>
             </tr>
           </thead>
@@ -140,7 +144,7 @@ export function AdminDashboardPageContent() {
                 <DataTableCell>{session.section}</DataTableCell>
                 <DataTableCell>{formatRecordedAt(session.loginAt)}</DataTableCell>
                 <DataTableCell>{session.logoutAt ? formatRecordedAt(session.logoutAt) : "Active"}</DataTableCell>
-                <DataTableCell>{borrowedCountsBySessionId.get(session.id) ?? 0}</DataTableCell>
+                <DataTableCell>{activityCountsBySessionId.get(session.id) ?? 0}</DataTableCell>
                 <DataTableCell>
                   <Button asChild variant="ghost" size="icon" aria-label={`View ${session.name} transactions`}>
                     <Link href={`/admin/sessions/${session.id}` as Route}>

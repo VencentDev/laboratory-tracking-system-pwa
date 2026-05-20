@@ -99,6 +99,28 @@ const fallbackNavItems = [
       url: "/scan" as Route,
       icon: <LayoutDashboardIcon />,
     },
+    {
+      title: "Inventory",
+      icon: <PackagePlusIcon />,
+      isActive: true,
+      items: [
+        {
+          title: "Manage Items",
+          url: "/add-items" as Route,
+        },
+      ],
+    },
+    {
+      title: "Borrowers",
+      icon: <SquareUserRoundIcon />,
+      isActive: true,
+      items: [
+        {
+          title: "Manage Borrowers",
+          url: "/register-borrower" as Route,
+        },
+      ],
+    },
 ] satisfies SidebarNavItem[];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {

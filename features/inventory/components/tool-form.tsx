@@ -9,6 +9,7 @@ import { Button } from "@/core/ui/button";
 import { Card, CardContent } from "@/core/ui/card";
 import { Input } from "@/core/ui/input";
 import { OverlappingField } from "@/core/ui/overlapping-field";
+import { recordToolkeeperActivity } from "@/features/auth/lib/auth-repository";
 import { BarcodeDisplay } from "@/features/inventory/components/barcode-display";
 import { CategorySelector } from "@/features/inventory/components/category-selector";
 import { ToolStatusSelector } from "@/features/inventory/components/tool-status-selector";
@@ -21,6 +22,7 @@ import type { ToolProfile } from "@/features/inventory/types";
 
 type ToolFormProps = {
   tool?: ToolProfile;
+  activitySessionId?: number;
   onSuccess?: (mode: "create" | "update") => void;
 };
 
@@ -33,7 +35,7 @@ function getDefaultValues(tool?: ToolProfile): ToolInput {
   };
 }
 
-export function ToolForm({ tool, onSuccess }: ToolFormProps) {
+export function ToolForm({ tool, activitySessionId, onSuccess }: ToolFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const { data: tools } = useTools();
   const form = useForm<ToolInput>({
@@ -76,6 +78,15 @@ export function ToolForm({ tool, onSuccess }: ToolFormProps) {
       }
 
       form.reset(getDefaultValues());
+      if (activitySessionId) {
+        await recordToolkeeperActivity({
+          sessionId: activitySessionId,
+          activityType: "tool_created",
+          entityId: String(createdTool.id),
+          entityLabel: createdTool.name,
+          details: createdTool.barcode,
+        });
+      }
       toast.success(`${createdTool.name} was registered and is ready for barcode printing.`);
       onSuccess?.("create");
     } catch {

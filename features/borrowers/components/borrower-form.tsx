@@ -9,6 +9,7 @@ import { Button } from "@/core/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/core/ui/card";
 import { Input } from "@/core/ui/input";
 import { OverlappingField } from "@/core/ui/overlapping-field";
+import { recordToolkeeperActivity } from "@/features/auth/lib/auth-repository";
 import { BorrowerTypeSelector } from "@/features/borrowers/components/borrower-type-selector";
 import { createBorrower, updateBorrower } from "@/features/borrowers/lib/borrower-repository";
 import { borrowerSchema, type BorrowerInput } from "@/features/borrowers/lib/validations";
@@ -16,10 +17,11 @@ import type { BorrowerProfile } from "@/features/borrowers/types";
 
 type BorrowerFormProps = {
   borrower?: BorrowerProfile;
+  activitySessionId?: number;
   onSuccess?: (mode: "create" | "update") => void;
 };
 
-export function BorrowerForm({ borrower, onSuccess }: BorrowerFormProps) {
+export function BorrowerForm({ borrower, activitySessionId, onSuccess }: BorrowerFormProps) {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const form = useForm<BorrowerInput>({
@@ -81,6 +83,15 @@ export function BorrowerForm({ borrower, onSuccess }: BorrowerFormProps) {
         section: "",
         contactNumber: "",
       });
+      if (activitySessionId) {
+        await recordToolkeeperActivity({
+          sessionId: activitySessionId,
+          activityType: "borrower_created",
+          entityId: createdBorrower.id,
+          entityLabel: createdBorrower.name,
+          details: createdBorrower.schoolId,
+        });
+      }
       toast.success(`${createdBorrower.name} was recorded and is ready for accountability tracking.`);
       onSuccess?.("create");
     } catch {
