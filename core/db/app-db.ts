@@ -4,6 +4,7 @@ import type {
   AdminCredentialRecord,
   AppSettingRecord,
   BorrowerRecord,
+  ToolkeeperActivityRecord,
   ToolkeeperSessionRecord,
   ToolRecord,
   ToolTransactionRecord,
@@ -113,6 +114,19 @@ const schemaVersions: SchemaVersionDefinition[] = [
       } satisfies AdminCredentialRecord);
     },
   },
+  {
+    version: 5,
+    stores: {
+      tools: "++id, &barcode, currentStatus, category, createdAt, updatedAt, deletedAt",
+      borrowers: "&id, &schoolId, type, createdAt, deletedAt",
+      transactions:
+        "++id, toolId, barcode, borrowerId, borrowerSchoolId, borrowerName, transactionType, recordedAt, [toolId+transactionType]",
+      appSettings: "&key, updatedAt",
+      adminCredentials: "&id, updatedAt",
+      toolkeeperSessions: "++id, studentId, loginAt, logoutAt",
+      toolkeeperActivities: "++id, sessionId, activityType, recordedAt",
+    },
+  },
 ];
 
 export class AppDatabase extends Dexie {
@@ -122,6 +136,7 @@ export class AppDatabase extends Dexie {
   appSettings!: EntityTable<AppSettingRecord, "key">;
   adminCredentials!: EntityTable<AdminCredentialRecord, "id">;
   toolkeeperSessions!: EntityTable<ToolkeeperSessionRecord, "id">;
+  toolkeeperActivities!: EntityTable<ToolkeeperActivityRecord, "id">;
 
   constructor() {
     super(APP_DB_NAME);

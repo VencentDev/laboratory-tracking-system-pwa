@@ -21,12 +21,14 @@ import { deleteTool, deleteTools } from "@/features/inventory/lib/tool-repositor
 import type { ToolProfile, ToolStatus } from "@/features/inventory/types";
 
 type ToolListProps = {
+  allowDelete?: boolean;
+  canEdit?: (tool: ToolProfile) => boolean;
   onEdit?: (tool: ToolProfile) => void;
 };
 
 const PAGE_SIZE = 10;
 
-export function ToolList({ onEdit }: ToolListProps) {
+export function ToolList({ allowDelete = true, canEdit = () => true, onEdit }: ToolListProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [toolPendingDelete, setToolPendingDelete] = useState<ToolProfile | null>(null);
   const [selectedToolsPendingDelete, setSelectedToolsPendingDelete] = useState<ToolProfile[]>([]);
@@ -294,16 +296,18 @@ export function ToolList({ onEdit }: ToolListProps) {
               Print Selected Barcodes
               {selectedFilteredTools.length ? ` (${selectedFilteredTools.length})` : ""}
             </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              className="w-full md:w-auto lg:self-stretch shrink-0"
-              disabled={selectedFilteredTools.length === 0 || isDeletingSelectedTools}
-              onClick={() => setSelectedToolsPendingDelete(selectedFilteredTools)}
-            >
-              Move Selected To Trash
-              {selectedFilteredTools.length ? ` (${selectedFilteredTools.length})` : ""}
-            </Button>
+            {allowDelete ? (
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full md:w-auto lg:self-stretch shrink-0"
+                disabled={selectedFilteredTools.length === 0 || isDeletingSelectedTools}
+                onClick={() => setSelectedToolsPendingDelete(selectedFilteredTools)}
+              >
+                Move Selected To Trash
+                {selectedFilteredTools.length ? ` (${selectedFilteredTools.length})` : ""}
+              </Button>
+            ) : null}
           </div>
         </div>
       </div>
@@ -343,6 +347,7 @@ export function ToolList({ onEdit }: ToolListProps) {
             <tbody>
               {paginatedTools.map((tool) => {
                 const isDeleting = deletingToolId === tool.id;
+                const isEditable = canEdit(tool);
 
                 return (
                   <tr key={tool.id}>
@@ -382,27 +387,31 @@ export function ToolList({ onEdit }: ToolListProps) {
                     <DataTableCell>{tool.description || "No description provided."}</DataTableCell>
                     <DataTableCell className="text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
-                          onClick={() => onEdit?.(tool)}
-                          aria-label={`Edit ${tool.name}`}
-                          title="Edit"
-                        >
-                          <PencilIcon className="h-4 w-4" />
-                        </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        disabled={isDeleting}
-                        onClick={() => setToolPendingDelete(tool)}
-                        aria-label={`Delete ${tool.name}`}
-                        title="Delete"
-                      >
-                          <Trash2Icon className="h-4 w-4" />
-                        </Button>
+                        {isEditable ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            onClick={() => onEdit?.(tool)}
+                            aria-label={`Edit ${tool.name}`}
+                            title="Edit"
+                          >
+                            <PencilIcon className="h-4 w-4" />
+                          </Button>
+                        ) : null}
+                        {allowDelete ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            disabled={isDeleting}
+                            onClick={() => setToolPendingDelete(tool)}
+                            aria-label={`Delete ${tool.name}`}
+                            title="Delete"
+                          >
+                            <Trash2Icon className="h-4 w-4" />
+                          </Button>
+                        ) : null}
                       </div>
                     </DataTableCell>
                   </tr>
@@ -456,37 +465,41 @@ export function ToolList({ onEdit }: ToolListProps) {
         </DialogContent>
       </Dialog>
 
-      <DestructiveConfirmDialog
-        open={Boolean(toolPendingDelete)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setToolPendingDelete(null);
-          }
-        }}
-        title="Move this tool to trash?"
-        description={
-          toolPendingDelete
-            ? `${toolPendingDelete.name} (${toolPendingDelete.barcode}) will be hidden from the inventory catalog until you restore it from Trash.`
-            : "This tool will be moved to trash until you restore it."
-        }
-        confirmLabel="Move to trash"
-        isPending={deletingToolId === toolPendingDelete?.id}
-        onConfirm={handleDelete}
-      />
+      {allowDelete ? (
+        <>
+          <DestructiveConfirmDialog
+            open={Boolean(toolPendingDelete)}
+            onOpenChange={(open) => {
+              if (!open) {
+                setToolPendingDelete(null);
+              }
+            }}
+            title="Move this tool to trash?"
+            description={
+              toolPendingDelete
+                ? `${toolPendingDelete.name} (${toolPendingDelete.barcode}) will be hidden from the inventory catalog until you restore it from Trash.`
+                : "This tool will be moved to trash until you restore it."
+            }
+            confirmLabel="Move to trash"
+            isPending={deletingToolId === toolPendingDelete?.id}
+            onConfirm={handleDelete}
+          />
 
-      <DestructiveConfirmDialog
-        open={selectedToolsPendingDelete.length > 0}
-        onOpenChange={(open) => {
-          if (!open) {
-            setSelectedToolsPendingDelete([]);
-          }
-        }}
-        title="Move selected tools to trash?"
-        description={formatBulkDeleteDescription(selectedToolsPendingDelete)}
-        confirmLabel={selectedToolsPendingDelete.length === 1 ? "Move to trash" : "Move to trash"}
-        isPending={isDeletingSelectedTools}
-        onConfirm={handleDeleteSelectedTools}
-      />
+          <DestructiveConfirmDialog
+            open={selectedToolsPendingDelete.length > 0}
+            onOpenChange={(open) => {
+              if (!open) {
+                setSelectedToolsPendingDelete([]);
+              }
+            }}
+            title="Move selected tools to trash?"
+            description={formatBulkDeleteDescription(selectedToolsPendingDelete)}
+            confirmLabel={selectedToolsPendingDelete.length === 1 ? "Move to trash" : "Move to trash"}
+            isPending={isDeletingSelectedTools}
+            onConfirm={handleDeleteSelectedTools}
+          />
+        </>
+      ) : null}
     </div>
   );
 }

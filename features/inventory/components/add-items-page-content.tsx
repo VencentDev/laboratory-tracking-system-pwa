@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
 import { PlusIcon } from "lucide-react";
 
 import { exportToolsCsv } from "@/core/backup/export-data";
@@ -15,13 +16,30 @@ import {
   DialogTitle,
 } from "@/core/ui/dialog";
 import { PageHeader } from "@/core/ui/page-header";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { getSessionActivities } from "@/features/auth/lib/auth-repository";
 import { ToolForm } from "@/features/inventory/components/tool-form";
 import { ToolList } from "@/features/inventory/components/tool-list";
 import type { ToolProfile } from "@/features/inventory/types";
 
 export function AddItemsPageContent() {
+  const { session } = useAuth();
+  const toolkeeperActivities = useLiveQuery(
+    () => session?.role === "toolkeeper" ? getSessionActivities(session.sessionId) : Promise.resolve([]),
+    [session],
+    [],
+  );
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedTool, setSelectedTool] = useState<ToolProfile | undefined>();
+  const editableToolIds = useMemo(
+    () =>
+      new Set(
+        toolkeeperActivities
+          .filter((activity) => activity.activityType === "tool_created")
+          .map((activity) => Number(activity.entityId)),
+      ),
+    [toolkeeperActivities],
+  );
 
   function openCreateToolDialog() {
     setSelectedTool(undefined);
@@ -29,6 +47,10 @@ export function AddItemsPageContent() {
   }
 
   function openEditToolDialog(tool: ToolProfile) {
+    if (session?.role === "toolkeeper" && !editableToolIds.has(tool.id)) {
+      return;
+    }
+
     setSelectedTool(tool);
     setIsFormOpen(true);
   }
@@ -46,11 +68,13 @@ export function AddItemsPageContent() {
         description="Register barcode-labeled tools, maintain inventory records, and print labels directly from the catalog."
         actions={
           <>
-            <CsvTransferActions
-              label="tools"
-              onExport={exportToolsCsv}
-              onImport={importToolsCsv}
-            />
+            {session?.role === "admin" ? (
+              <CsvTransferActions
+                label="tools"
+                onExport={exportToolsCsv}
+                onImport={importToolsCsv}
+              />
+            ) : null}
             <Button type="button" className="gap-2 px-5" onClick={openCreateToolDialog}>
               <PlusIcon className="h-4 w-4" />
               Add Tool
@@ -59,7 +83,11 @@ export function AddItemsPageContent() {
         }
       />
 
-      <ToolList onEdit={openEditToolDialog} />
+      <ToolList
+        allowDelete={session?.role === "admin"}
+        canEdit={(tool) => session?.role !== "toolkeeper" || editableToolIds.has(tool.id)}
+        onEdit={openEditToolDialog}
+      />
 
       <Dialog
         open={isFormOpen}
@@ -84,6 +112,7 @@ export function AddItemsPageContent() {
           <ToolForm
             key={selectedTool?.id ?? "create"}
             tool={selectedTool}
+            activitySessionId={session?.role === "toolkeeper" ? session.sessionId : undefined}
             onSuccess={(mode) => {
               if (mode === "update") {
                 closeToolDialog();

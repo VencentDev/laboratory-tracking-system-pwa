@@ -15,6 +15,8 @@ import { deleteBorrower } from "@/features/borrowers/lib/borrower-repository";
 import type { BorrowerProfile } from "@/features/borrowers/types";
 
 type BorrowerListProps = {
+  allowDelete?: boolean;
+  canEdit?: (borrower: BorrowerProfile) => boolean;
   onEdit?: (borrower: BorrowerProfile) => void;
   searchQuery?: string;
   typeFilter?: string;
@@ -22,7 +24,13 @@ type BorrowerListProps = {
 
 const PAGE_SIZE = 10;
 
-export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: BorrowerListProps) {
+export function BorrowerList({
+  allowDelete = true,
+  canEdit = () => true,
+  onEdit,
+  searchQuery = "",
+  typeFilter = "all",
+}: BorrowerListProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [borrowerPendingDelete, setBorrowerPendingDelete] = useState<BorrowerProfile | null>(null);
   const [deletingBorrowerId, setDeletingBorrowerId] = useState<string | null>(null);
@@ -137,6 +145,7 @@ export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: B
           <tbody>
             {paginatedBorrowers.map((borrower) => {
               const isDeleting = deletingBorrowerId === borrower.id;
+              const isEditable = canEdit(borrower);
 
               return (
                 <tr key={borrower.id}>
@@ -156,27 +165,31 @@ export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: B
                   <DataTableCell className="hidden lg:table-cell">{borrower.contactNumber || "N/A"}</DataTableCell>
                   <DataTableCell className="text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
-                        onClick={() => onEdit?.(borrower)}
-                        aria-label={`Edit ${borrower.name}`}
-                        title="Edit"
-                      >
-                        <PencilIcon className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        disabled={isDeleting}
-                        onClick={() => setBorrowerPendingDelete(borrower)}
-                        aria-label={`Delete ${borrower.name}`}
-                        title="Delete"
-                      >
-                        <Trash2Icon className="h-4 w-4" />
-                      </Button>
+                      {isEditable ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
+                          onClick={() => onEdit?.(borrower)}
+                          aria-label={`Edit ${borrower.name}`}
+                          title="Edit"
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </Button>
+                      ) : null}
+                      {allowDelete ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          disabled={isDeleting}
+                          onClick={() => setBorrowerPendingDelete(borrower)}
+                          aria-label={`Delete ${borrower.name}`}
+                          title="Delete"
+                        >
+                          <Trash2Icon className="h-4 w-4" />
+                        </Button>
+                      ) : null}
                     </div>
                   </DataTableCell>
                 </tr>
@@ -192,23 +205,25 @@ export function BorrowerList({ onEdit, searchQuery = "", typeFilter = "all" }: B
         onPageChange={setCurrentPage}
       />
 
-      <DestructiveConfirmDialog
-        open={Boolean(borrowerPendingDelete)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setBorrowerPendingDelete(null);
+      {allowDelete ? (
+        <DestructiveConfirmDialog
+          open={Boolean(borrowerPendingDelete)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setBorrowerPendingDelete(null);
+            }
+          }}
+          title="Move this borrower to trash?"
+          description={
+            borrowerPendingDelete
+              ? `${borrowerPendingDelete.name} (${borrowerPendingDelete.schoolId}) will be hidden from the borrower registry until you restore the record from Trash.`
+              : "This borrower will be moved to trash until you restore the record."
           }
-        }}
-        title="Move this borrower to trash?"
-        description={
-          borrowerPendingDelete
-            ? `${borrowerPendingDelete.name} (${borrowerPendingDelete.schoolId}) will be hidden from the borrower registry until you restore the record from Trash.`
-            : "This borrower will be moved to trash until you restore the record."
-        }
-        confirmLabel="Move to trash"
-        isPending={deletingBorrowerId === borrowerPendingDelete?.id}
-        onConfirm={handleDelete}
-      />
+          confirmLabel="Move to trash"
+          isPending={deletingBorrowerId === borrowerPendingDelete?.id}
+          onConfirm={handleDelete}
+        />
+      ) : null}
     </div>
   );
 }

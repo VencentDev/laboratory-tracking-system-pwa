@@ -1,11 +1,19 @@
 import { appDb } from "@/core/db/app-db";
-import type { ToolkeeperSessionRecord } from "@/core/db/schema";
+import type { ToolkeeperActivityRecord, ToolkeeperActivityType, ToolkeeperSessionRecord } from "@/core/db/schema";
 
 export type ToolkeeperSessionInput = {
   name: string;
   studentId: string;
   yearLevel: string;
   section: string;
+};
+
+export type ToolkeeperActivityInput = {
+  sessionId: number;
+  activityType: ToolkeeperActivityType;
+  entityId: string;
+  entityLabel: string;
+  details?: string | null;
 };
 
 async function seedDefaultAdminCredentials() {
@@ -74,6 +82,24 @@ export async function listToolkeeperSessions() {
   return appDb.toolkeeperSessions.orderBy("loginAt").reverse().toArray();
 }
 
+export async function recordToolkeeperActivity(data: ToolkeeperActivityInput) {
+  return appDb.toolkeeperActivities.add({
+    ...data,
+    details: data.details ?? null,
+    recordedAt: new Date(),
+  } as ToolkeeperActivityRecord);
+}
+
+export async function listToolkeeperActivities() {
+  return appDb.toolkeeperActivities.orderBy("recordedAt").reverse().toArray();
+}
+
+export async function getSessionActivities(sessionId: number) {
+  const activities = await appDb.toolkeeperActivities.where("sessionId").equals(sessionId).toArray();
+
+  return activities.sort((left, right) => right.recordedAt.getTime() - left.recordedAt.getTime());
+}
+
 export async function getSessionTransactions(loginAt: Date, logoutAt: Date | null) {
   let collection = appDb.transactions.where("recordedAt").aboveOrEqual(loginAt);
 
@@ -94,5 +120,6 @@ export async function getSessionWithTransactions(sessionId: number) {
   return {
     session,
     transactions: await getSessionTransactions(session.loginAt, session.logoutAt),
+    activities: await getSessionActivities(session.id),
   };
 }
