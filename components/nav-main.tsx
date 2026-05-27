@@ -56,6 +56,10 @@ export function NavMain({
       return false;
     }
 
+    if (url === "/admin") {
+      return pathname === url;
+    }
+
     return pathname === url || pathname.startsWith(`${url}/`);
   }
 

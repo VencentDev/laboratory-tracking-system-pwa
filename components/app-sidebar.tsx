@@ -77,12 +77,12 @@ const adminNavItems = [
     isActive: true,
     items: [
       {
-        title: "Settings",
+        title: "App Settings",
         url: "/settings" as Route,
       },
       {
-        title: "Safety",
-        url: "/trash" as Route,
+        title: "Admin Credentials",
+        url: "/admin/settings" as Route,
       },
     ],
   },
