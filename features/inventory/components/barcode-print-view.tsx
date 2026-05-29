@@ -53,6 +53,10 @@ const PAPER_SIZES: Record<PaperSizeKey, { label: string; width: number; height: 
 
 const MIN_LABEL_WIDTH = 45;
 const MIN_LABEL_HEIGHT = 24;
+const DEFAULT_LABEL_WIDTH = 58;
+const DEFAULT_LABEL_HEIGHT = 32;
+const DEFAULT_LABEL_GAP = 6;
+const DEFAULT_PAGE_MARGIN = 12;
 
 export function BarcodePrintView({ tools }: BarcodePrintViewProps) {
   const labels = useMemo(() => (Array.isArray(tools) ? tools : [tools]), [tools]);
@@ -331,6 +335,11 @@ export function BarcodePrintView({ tools }: BarcodePrintViewProps) {
           touch-action: none;
         }
 
+        .barcode-label-symbol svg {
+          height: auto;
+          max-width: 100%;
+        }
+
         .barcode-print-output {
           display: block;
           height: 0;
@@ -398,20 +407,24 @@ export function BarcodePrintView({ tools }: BarcodePrintViewProps) {
 }
 
 function BarcodeLabel({ item }: { item: BarcodeCanvasItem }) {
+  const barcodeWidth = clamp(item.width / DEFAULT_LABEL_WIDTH, 0.78, 1.18);
+  const barcodeHeight = clamp(item.height * 1.16, 34, 52);
+
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center overflow-hidden p-2 text-center text-black">
+    <div className="flex h-full w-full flex-col items-center justify-center overflow-hidden px-3 py-2 text-center text-black">
       <div className="max-w-full truncate text-[10px] font-semibold leading-tight">{item.toolName}</div>
-      <div className="flex max-w-full justify-center overflow-hidden">
+      <div className="barcode-label-symbol flex w-full max-w-full justify-center overflow-visible">
         <Barcode
           background="transparent"
           displayValue={false}
           format="CODE128"
-          height={Math.max(16, item.height * 0.42)}
+          height={barcodeHeight}
+          margin={10}
           value={item.barcode}
-          width={Math.max(0.7, Math.min(1.4, item.width / 70))}
+          width={barcodeWidth}
         />
       </div>
-      <div className="max-w-full truncate font-mono text-[9px] tracking-[0.16em]">{item.barcode}</div>
+      <div className="max-w-full truncate font-mono text-[9px] tracking-[0.14em]">{item.barcode}</div>
     </div>
   );
 }
@@ -440,11 +453,13 @@ function MeasurementInput({
 }
 
 function createInitialItems(labels: ToolProfile[], paperSize: { width: number; height: number }) {
-  const margin = 12;
-  const gap = 6;
-  const labelWidth = 58;
-  const labelHeight = 32;
-  const columns = Math.max(1, Math.floor((paperSize.width - margin * 2 + gap) / (labelWidth + gap)));
+  const columns = Math.max(
+    1,
+    Math.floor(
+      (paperSize.width - DEFAULT_PAGE_MARGIN * 2 + DEFAULT_LABEL_GAP) /
+        (DEFAULT_LABEL_WIDTH + DEFAULT_LABEL_GAP),
+    ),
+  );
 
   return labels.map((tool, index) => {
     const column = index % columns;
@@ -455,10 +470,10 @@ function createInitialItems(labels: ToolProfile[], paperSize: { width: number; h
         id: tool.id,
         toolName: tool.name || "Unnamed tool",
         barcode: tool.barcode,
-        x: margin + column * (labelWidth + gap),
-        y: margin + row * (labelHeight + gap),
-        width: labelWidth,
-        height: labelHeight,
+        x: DEFAULT_PAGE_MARGIN + column * (DEFAULT_LABEL_WIDTH + DEFAULT_LABEL_GAP),
+        y: DEFAULT_PAGE_MARGIN + row * (DEFAULT_LABEL_HEIGHT + DEFAULT_LABEL_GAP),
+        width: DEFAULT_LABEL_WIDTH,
+        height: DEFAULT_LABEL_HEIGHT,
       },
       paperSize,
     );
