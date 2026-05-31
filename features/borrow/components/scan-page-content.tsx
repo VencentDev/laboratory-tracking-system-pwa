@@ -5,7 +5,6 @@ import { importTransactionsCsv } from "@/core/backup/import-data";
 import { Button } from "@/core/ui/button";
 import { CsvTransferActions } from "@/core/ui/csv-transfer-actions";
 import { PageHeader } from "@/core/ui/page-header";
-import { useAuth } from "@/features/auth/hooks/use-auth";
 import { BorrowSummaryCards } from "@/features/borrow/components/borrow-summary-cards";
 import { ReturnReviewDialog } from "@/features/borrow/components/return-review-dialog";
 import { BorrowTransactionHistory } from "@/features/borrow/components/borrow-transaction-history";
@@ -15,7 +14,6 @@ import { useScanScanner } from "@/features/borrow/hooks/use-scan-scanner";
 import { useTransactions } from "@/features/borrow/hooks/use-borrow";
 
 export function ScanPageContent() {
-  const { session } = useAuth();
   const { data: transactions, isLoading: isTransactionsLoading } = useTransactions();
   const { data: borrowers, isLoading: isBorrowersLoading } = useBorrowers();
 
@@ -46,11 +44,6 @@ export function ScanPageContent() {
     transactions?.filter((t) => t.transactionType === "borrowed").length ?? 0;
   const returnedCount =
     transactions?.filter((t) => t.transactionType === "returned").length ?? 0;
-  const issuedBy = session?.role === "toolkeeper" ? session.name : "Laboratory Staff";
-  const issuedByDetails =
-    session?.role === "toolkeeper"
-      ? [session.studentId, session.yearLevel, `Section ${session.section}`].join(" / ")
-      : null;
 
   function handleOpenChange(open: boolean) {
     if (!open) {
@@ -123,8 +116,6 @@ export function ScanPageContent() {
         onSubmit={handleSubmit}
         batchBorrowSession={batchBorrowSession}
         batchReturnSession={batchReturnSession}
-        issuedBy={issuedBy}
-        issuedByDetails={issuedByDetails}
         onDone={handleDone}
       />
 

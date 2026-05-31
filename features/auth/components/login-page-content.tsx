@@ -75,7 +75,7 @@ export function LoginPageContent() {
       return;
     }
 
-    router.replace((session.role === "admin" ? "/admin" : "/scan") as Route);
+    router.replace((session.role === "admin" ? "/admin/reports/toolkeepers" : "/scan") as Route);
   }, [isLoading, router, session]);
 
   const submitAdmin = adminForm.handleSubmit(async (values) => {
@@ -89,7 +89,7 @@ export function LoginPageContent() {
         return;
       }
 
-      router.push("/admin" as Route);
+      router.push("/admin/reports/toolkeepers" as Route);
     } finally {
       setIsSubmitting(false);
     }
