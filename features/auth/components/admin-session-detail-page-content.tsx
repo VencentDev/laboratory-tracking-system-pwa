@@ -33,9 +33,9 @@ export function AdminSessionDetailPageContent() {
     return (
       <div className="space-y-4">
         <Button asChild variant="outline" size="sm">
-          <Link href={"/admin" as Route}>
+          <Link href={"/admin/reports/toolkeepers" as Route}>
             <ArrowLeftIcon />
-            Back to dashboard
+            Back to reports
           </Link>
         </Button>
         <div className="rounded-[calc(var(--radius-xl)+2px)] border border-dashed border-border/80 bg-card/60 p-10 text-center text-sm text-muted-foreground">
@@ -59,7 +59,7 @@ export function AdminSessionDetailPageContent() {
           </p>
         </div>
         <Button asChild variant="outline" size="sm">
-          <Link href={"/admin" as Route}>
+          <Link href={"/admin/reports/toolkeepers" as Route}>
             <ArrowLeftIcon />
             Back
           </Link>

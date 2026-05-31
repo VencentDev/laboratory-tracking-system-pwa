@@ -14,7 +14,8 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import {
-  LayoutDashboardIcon,
+  ClipboardListIcon,
+  FileTextIcon,
   PackagePlusIcon,
   Settings2Icon,
   SquareUserRoundIcon,
@@ -37,9 +38,19 @@ type SidebarNavItem = {
 
 const adminNavItems = [
   {
-    title: "Dashboard",
-    url: "/admin" as Route,
-    icon: <LayoutDashboardIcon />,
+    title: "Reports",
+    icon: <FileTextIcon />,
+    isActive: true,
+    items: [
+      {
+        title: "Toolkeeper Reports",
+        url: "/admin/reports/toolkeepers" as Route,
+      },
+      {
+        title: "Acknowledgement Reports",
+        url: "/admin/reports/acknowledgements" as Route,
+      },
+    ],
   },
   {
     title: "Inventory",
@@ -97,7 +108,7 @@ const fallbackNavItems = [
     {
       title: "Borrow & Return",
       url: "/scan" as Route,
-      icon: <LayoutDashboardIcon />,
+      icon: <ClipboardListIcon />,
     },
     {
       title: "Inventory",
