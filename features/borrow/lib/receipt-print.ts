@@ -7,6 +7,7 @@ import type {
 const RECEIPT_WIDTH = 32;
 const PRINT_ROOT_ID = "receipt-print-root";
 const PRINT_STYLE_ID = "receipt-print-style";
+const RECEIPT_PRINTING_CLASS = "receipt-printing";
 const DEFAULT_BRIDGE_URL = "http://localhost:9321";
 const BRIDGE_TIMEOUT_MS = 2500;
 
@@ -143,7 +144,32 @@ function printBrowserReceipt(receiptText: string): void {
   receipt.textContent = receiptText;
   root.appendChild(receipt);
   injectPrintStyle();
+  document.body.classList.add(RECEIPT_PRINTING_CLASS);
+  const cleanup = registerBrowserReceiptPrintCleanup(root);
   window.print();
+  window.setTimeout(cleanup, 1000);
+}
+
+function registerBrowserReceiptPrintCleanup(root: HTMLElement): () => void {
+  let hasCleanedUp = false;
+
+  function cleanup() {
+    if (hasCleanedUp) {
+      return;
+    }
+
+    hasCleanedUp = true;
+    document.body.classList.remove(RECEIPT_PRINTING_CLASS);
+    window.removeEventListener("afterprint", cleanup);
+    window.setTimeout(() => {
+      root.innerHTML = "";
+      document.getElementById(PRINT_STYLE_ID)?.remove();
+    }, 0);
+  }
+
+  window.addEventListener("afterprint", cleanup, { once: true });
+
+  return cleanup;
 }
 
 function isBridgePrintEnabled(): boolean {
@@ -212,11 +238,11 @@ function injectPrintStyle(): void {
         background: white !important;
       }
 
-      body > :not(#${PRINT_ROOT_ID}) {
+      body.${RECEIPT_PRINTING_CLASS} > :not(#${PRINT_ROOT_ID}) {
         display: none !important;
       }
 
-      #${PRINT_ROOT_ID} {
+      body.${RECEIPT_PRINTING_CLASS} #${PRINT_ROOT_ID} {
         display: block !important;
         position: fixed !important;
         inset: 0 auto auto 0 !important;
@@ -230,7 +256,7 @@ function injectPrintStyle(): void {
         z-index: 9999 !important;
       }
 
-      .receipt-print-paper {
+      body.${RECEIPT_PRINTING_CLASS} .receipt-print-paper {
         width: 58mm !important;
         box-sizing: border-box !important;
         padding: 2mm !important;

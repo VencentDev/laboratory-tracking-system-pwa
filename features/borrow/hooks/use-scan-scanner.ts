@@ -39,6 +39,7 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
   const [receiptToPrint, setReceiptToPrint] = useState<BatchBorrowSession | BatchReturnSession | null>(null);
   const [pendingReturn, setPendingReturn] = useState<ReturnPreview | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [barcodeValue, setBarcodeValue] = useState("");
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   const processScan = useProcessScan();
@@ -95,6 +96,7 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
     setReceiptToPrint(null);
     setPendingReturn(null);
     setIsPreviewLoading(false);
+    setBarcodeValue("");
 
     if (scannerMode === "return") {
       setSelectedBorrowerId("");
@@ -111,12 +113,17 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
     setLastScannedBarcode(null);
     setPendingReturn(null);
     setIsPreviewLoading(false);
+    setBarcodeValue("");
   }, []);
 
   const clearBarcodeInput = useCallback(() => {
-    if (barcodeRef.current) {
-      barcodeRef.current.value = "";
-      barcodeRef.current.focus();
+    const barcodeInput = barcodeRef.current;
+
+    setBarcodeValue("");
+
+    if (barcodeInput) {
+      barcodeInput.value = "";
+      barcodeInput.focus();
     }
   }, []);
 
@@ -367,7 +374,7 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
 
-      const trimmedBarcode = barcodeRef.current?.value.trim() ?? "";
+      const trimmedBarcode = barcodeValue.trim();
 
       if (!trimmedBarcode) {
         barcodeRef.current?.focus();
@@ -439,6 +446,7 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
     },
     [
       clearBarcodeInput,
+      barcodeValue,
       handleBorrowSuccess,
       handleReturnPreview,
       handleScanError,
@@ -461,6 +469,8 @@ export function useScanScanner(options: UseScanScannerOptions = {}) {
     receiptToPrint,
     pendingReturn,
     barcodeRef,
+    barcodeValue,
+    setBarcodeValue,
     isSubmitting: processScan.isPending || isPreviewLoading,
     openScanner,
     closeScanner,
